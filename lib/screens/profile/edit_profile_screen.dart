@@ -1,0 +1,475 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
+import 'dart:io';
+import '../../blocs/auth/auth_bloc.dart';
+import '../../blocs/auth/auth_event.dart';
+import '../../blocs/auth/auth_state.dart';
+import '../../services/api_service.dart';
+
+class EditProfileScreen extends StatefulWidget {
+  const EditProfileScreen({super.key});
+
+  @override
+  State<EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<EditProfileScreen> {
+  final _formKey           = GlobalKey<FormState>();
+  final _nameController    = TextEditingController();
+  final _phoneController   = TextEditingController();
+  final _bioController     = TextEditingController();
+  final _jobController     = TextEditingController();
+  final _companyController = TextEditingController();
+
+  bool    _loading       = false;
+  bool    _avatarLoading = false;
+  String? _successMsg;
+  String? _errorMsg;
+  File?   _pickedImage; // preview lokal sebelum upload
+
+  @override
+  void initState() {
+    super.initState();
+    final state = context.read<AuthBloc>().state;
+    if (state is AuthAuthenticated) {
+      final u = state.user;
+      _nameController.text    = u.name;
+      _phoneController.text   = u.phone    ?? '';
+      _bioController.text     = u.bio      ?? '';       // ✅ sudah benar
+      _jobController.text     = u.jobTitle ?? '';       // ✅ sudah benar
+      _companyController.text = u.company  ?? '';       // ✅ sudah benar
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _bioController.dispose();
+    _jobController.dispose();
+    _companyController.dispose();
+    super.dispose();
+  }
+
+  // ── Pilih & upload avatar ─────────────────────────────────────
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source:       ImageSource.gallery,
+      maxWidth:     800,
+      maxHeight:    800,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    setState(() {
+      _pickedImage   = File(picked.path);
+      _avatarLoading = true;
+      _errorMsg      = null;
+      _successMsg    = null;
+    });
+
+    try {
+      final formData = FormData.fromMap({
+        'avatar': await MultipartFile.fromFile(
+          picked.path,
+          filename: picked.name,
+        ),
+      });
+      await ApiService.dio.post('/profile/avatar', data: formData);
+      // ignore: use_build_context_synchronously
+      context.read<AuthBloc>().add(CheckAuthStatus());
+      if (mounted) setState(() => _successMsg = 'Foto profil berhasil diperbarui!');
+    } catch (e) {
+      final data = (e as dynamic).response?.data;
+      final msg  = data?['message'] ?? 'Gagal mengunggah foto.';
+      if (mounted) setState(() { _errorMsg = msg.toString(); _pickedImage = null; });
+    } finally {
+      if (mounted) setState(() => _avatarLoading = false);
+    }
+  }
+
+  // ── Simpan perubahan profil ───────────────────────────────────
+  Future<void> _save() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() { _loading = true; _successMsg = null; _errorMsg = null; });
+    try {
+      await ApiService.dio.post('/profile/update', data: {
+        'name':      _nameController.text.trim(),
+        'phone':     _phoneController.text.trim(),
+        'bio':       _bioController.text.trim(),
+        'job_title': _jobController.text.trim(),
+        'company':   _companyController.text.trim(),
+      });
+      // ignore: use_build_context_synchronously
+      context.read<AuthBloc>().add(CheckAuthStatus());
+      if (mounted) setState(() => _successMsg = 'Profil berhasil diperbarui!');
+    } catch (e) {
+      final data = (e as dynamic).response?.data;
+      final msg  = data?['errors']?['name']  ??
+                   data?['errors']?['phone'] ??
+                   data?['message']          ??
+                   'Gagal memperbarui profil.';
+      if (mounted) setState(() => _errorMsg = msg.toString());
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0f1b35),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF0f1b35),
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text('Edit Profil',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ),
+      body: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          final user = state is AuthAuthenticated ? state.user : null;
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+
+                  // ── Avatar dengan tombol kamera ────────────────
+                  Center(
+                    child: Stack(
+                      children: [
+                        // Foto / inisial
+                        Container(
+                          width: 90, height: 90,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              //ignore: deprecated_member_use
+                              color: const Color(0xFF1a56db).withOpacity(0.4),
+                              width: 2.5,
+                            ),
+                          ),
+                          child: ClipOval(
+                            child: _avatarLoading
+                                ? Container(
+                                    color: const Color(0xFF1a3a6b),
+                                    child: const Center(
+                                      child: CircularProgressIndicator(
+                                          color: Color(0xFF1a56db),
+                                          strokeWidth: 2),
+                                    ),
+                                  )
+                                : _pickedImage != null
+                                    // Preview file lokal
+                                    ? Image.file(_pickedImage!,
+                                        fit: BoxFit.cover,
+                                        width: 90, height: 90)
+                                    : user?.avatarUrl != null
+                                        // Avatar dari server
+                                        ? Image.network(
+                                            user!.avatarUrl!,
+                                            fit: BoxFit.cover,
+                                            width: 90, height: 90,
+                                            loadingBuilder: (_, child, progress) =>
+                                                progress == null
+                                                    ? child
+                                                    : Container(
+                                                        color: const Color(0xFF1a3a6b),
+                                                        child: const Center(
+                                                          child: CircularProgressIndicator(
+                                                              color: Color(0xFF1a56db),
+                                                              strokeWidth: 2),
+                                                        ),
+                                                      ),
+                                            errorBuilder: (_, __, ___) =>
+                                                _defaultAvatar(user.name),
+                                          )
+                                        // Default inisial
+                                        : _defaultAvatar(user?.name ?? 'K'),
+                          ),
+                        ),
+
+                        // Tombol kamera pojok kanan bawah
+                        Positioned(
+                          bottom: 0, right: 0,
+                          child: GestureDetector(
+                            onTap: _avatarLoading ? null : _pickAndUploadAvatar,
+                            child: Container(
+                              width: 30, height: 30,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1a56db),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: const Color(0xFF0f1b35), width: 2),
+                              ),
+                              child: const Icon(Icons.camera_alt,
+                                  color: Colors.white, size: 15),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+                  Center(
+                    child: Text('Ketuk ikon kamera untuk ganti foto',
+                        style: TextStyle(
+                          //ignore: deprecated_member_use
+                            color: Colors.white.withOpacity(0.3),
+                            fontSize: 11)),
+                  ),
+
+                  const SizedBox(height: 28),
+
+                  // ── Informasi Dasar ────────────────────────────
+                  _sectionHeader('INFORMASI DASAR', const Color(0xFF0891b2)),
+                  _buildField(
+                    controller: _nameController,
+                    label:      'Nama Lengkap',
+                    icon:       Icons.person_outline,
+                    validator:  (v) => v == null || v.trim().isEmpty
+                        ? 'Nama wajib diisi' : null,
+                  ),
+                  const SizedBox(height: 14),
+                  _buildField(
+                    controller:   _phoneController,
+                    label:        'No. Telepon',
+                    icon:         Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Informasi Pekerjaan ────────────────────────
+                  _sectionHeader('INFORMASI PEKERJAAN', const Color(0xFFd97706)),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildField(
+                          controller: _jobController,
+                          label:      'Jabatan',
+                          icon:       Icons.work_outline,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildField(
+                          controller: _companyController,
+                          label:      'Perusahaan',
+                          icon:       Icons.business_outlined,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Tentang Kamu ───────────────────────────────
+                  _sectionHeader('TENTANG KAMU', const Color(0xFF9b59b6)),
+                  _buildField(
+                    controller: _bioController,
+                    label:      'Bio',
+                    icon:       Icons.notes_outlined,
+                    maxLines:   4,
+                    maxLength:  300,
+                    hintText:   'Ceritakan sedikit tentang dirimu...',
+                  ),
+
+                  const SizedBox(height: 6),
+                  Text('Perubahan diterapkan setelah disimpan.',
+                      style: TextStyle(
+                        //ignore: deprecated_member_use
+                          color: Colors.white.withOpacity(0.3), fontSize: 11)),
+
+                  const SizedBox(height: 20),
+
+                  // ── Pesan sukses / error ───────────────────────
+                  if (_successMsg != null) _infoBox(_successMsg!, Colors.green),
+                  if (_errorMsg   != null) _infoBox(_errorMsg!,   Colors.red),
+
+                  const SizedBox(height: 8),
+
+                  // ── Tombol ────────────────────────────────────
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _loading ? null : () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            //ignore: deprecated_member_use
+                            side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: Text('Batal',
+                              style: TextStyle(
+                                //ignore: deprecated_member_use
+                                  color: Colors.white.withOpacity(0.7))),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          onPressed: _loading ? null : _save,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF1a56db),
+                            disabledBackgroundColor: Colors.white12,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          child: _loading
+                              ? const SizedBox(
+                                  width: 20, height: 20,
+                                  child: CircularProgressIndicator(
+                                      color: Color.fromRGBO(255, 255, 255, 1), strokeWidth: 2.5))
+                              : const Text('Simpan Perubahan',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700)),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _defaultAvatar(String name) {
+    return Container(
+      width: 90, height: 90,
+      color: const Color(0xFF1a56db),
+      child: Center(
+        child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : 'K',
+          style: const TextStyle(
+              color: Colors.white, fontSize: 34, fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              //ignore: deprecated_member_use
+              color: color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6),
+              //ignore: deprecated_member_use
+              border: Border.all(color: color.withOpacity(0.4)),
+            ),
+            child: Text(title,
+                style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5)),
+          ),
+          const SizedBox(width: 10),
+          //ignore: deprecated_member_use
+          Expanded(child: Divider(color: Colors.white.withOpacity(0.08))),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType keyboardType = TextInputType.text,
+    int  maxLines  = 1,
+    int? maxLength,
+    String? hintText,
+    String? Function(String?)? validator,
+  }) {
+    return TextFormField(
+      controller:   controller,
+      keyboardType: keyboardType,
+      maxLines:     maxLines,
+      maxLength:    maxLength,
+      style:        const TextStyle(color: Colors.white),
+      validator:    validator,
+      decoration: InputDecoration(
+        labelText:    label,
+        hintText:     hintText,
+        //ignore: deprecated_member_use
+        labelStyle:   TextStyle(color: Colors.white.withOpacity(0.55)),
+        //ignore: deprecated_member_use
+        hintStyle:    TextStyle(color: Colors.white.withOpacity(0.25)),
+        //ignore: deprecated_member_use
+        prefixIcon:   Icon(icon, color: Colors.white.withOpacity(0.4), size: 20),
+        filled:       true,
+        //ignore: deprecated_member_use
+        fillColor:    Colors.white.withOpacity(0.06),
+        //ignore: deprecated_member_use
+        counterStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF1a56db), width: 1.5)),
+        errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.red, width: 1.5)),
+        focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.red, width: 1.5)),
+      ),
+    );
+  }
+
+  Widget _infoBox(String msg, Color color) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        //ignore: deprecated_member_use
+        color:  color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(10),
+        //ignore: deprecated_member_use
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            color == Colors.green
+                ? Icons.check_circle_outline
+                : Icons.error_outline,
+            color: color, size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text(msg,
+                  style: TextStyle(color: color, fontSize: 13))),
+        ],
+      ),
+    );
+  }
+}
