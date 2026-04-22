@@ -4,6 +4,7 @@ import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
 import '../../blocs/auth/auth_state.dart';
 import 'package:kypay/screens/auth/register_screen.dart';
+import 'package:kypay/screens/auth/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -80,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         'Masuk ke akun kamu',
                         style: TextStyle(
-                          //ignore: deprecated_member_use
+                          // ignore: deprecated_member_use
                           color: Colors.white.withOpacity(0.5),
                           fontSize: 14,
                         ),
@@ -91,11 +92,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
                 const SizedBox(height: 48),
 
-                // Email Field
+                // Nomor HP Field
                 Text(
                   'Nomor HP',
                   style: TextStyle(
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -104,45 +105,70 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 TextField(
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
+                  keyboardType: TextInputType.phone,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Nomor HP (contoh: 08123456789)',
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                     filled: true,
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     fillColor: Colors.white.withOpacity(0.08),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      //ignore: deprecated_member_use
+                      // ignore: deprecated_member_use
                       borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      //ignore: deprecated_member_use
+                      // ignore: deprecated_member_use
                       borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(color: Color(0xFF1a56db)),
                     ),
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     prefixIcon: Icon(Icons.phone_android, color: Colors.white.withOpacity(0.4)),
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
-                // Password Field
-                Text(
-                  'Password',
-                  style: TextStyle(
-                    //ignore: deprecated_member_use
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                // Password Field + Lupa Password
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Password',
+                      style: TextStyle(
+                        // ignore: deprecated_member_use
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    // ✅ Tombol Lupa Password
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider.value(
+                            value: context.read<AuthBloc>(),
+                            child: const ForgotPasswordScreen(),
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        'Lupa Password?',
+                        style: TextStyle(
+                          color: const Color(0xFF1a56db),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 TextField(
@@ -151,35 +177,35 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     hintText: 'Masukkan password kamu',
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
                     filled: true,
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     fillColor: Colors.white.withOpacity(0.08),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      //ignore: deprecated_member_use
+                      // ignore: deprecated_member_use
                       borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      //ignore: deprecated_member_use
+                      // ignore: deprecated_member_use
                       borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      //ignore: deprecated_member_use
                       borderSide: const BorderSide(color: Color(0xFF1a56db)),
                     ),
-                    //ignore: deprecated_member_use
+                    // ignore: deprecated_member_use
                     prefixIcon: Icon(Icons.lock_outline, color: Colors.white.withOpacity(0.4)),
                     suffixIcon: IconButton(
                       icon: Icon(
                         _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        //ignore: deprecated_member_use
+                        // ignore: deprecated_member_use
                         color: Colors.white.withOpacity(0.4),
                       ),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                 ),
@@ -231,15 +257,17 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: TextButton(
                     onPressed: () => Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => BlocProvider.value(
-                        value: context.read<AuthBloc>(),
-                        child: const RegisterScreen(),
-                      )),
+                      MaterialPageRoute(
+                        builder: (_) => BlocProvider.value(
+                          value: context.read<AuthBloc>(),
+                          child: const RegisterScreen(),
+                        ),
+                      ),
                     ),
                     child: RichText(
                       text: TextSpan(
                         text: 'Belum punya akun? ',
-                        //ignore: deprecated_member_use
+                        // ignore: deprecated_member_use
                         style: TextStyle(color: Colors.white.withOpacity(0.5)),
                         children: const [
                           TextSpan(

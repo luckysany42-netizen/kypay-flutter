@@ -40,3 +40,15 @@ class RegisterSuccess extends AuthState {
 
 // ✅ PIN berhasil dibuat — siap login
 class PinSetSuccess extends AuthState {}
+
+// ✅ Email lupa password berhasil dikirim
+class ForgotPasswordSuccess extends AuthState {
+  final String email;
+  ForgotPasswordSuccess({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}
+
+// ✅ Reset password berhasil
+class ResetPasswordSuccess extends AuthState {}

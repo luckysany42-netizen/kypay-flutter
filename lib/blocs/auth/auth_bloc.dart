@@ -12,6 +12,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<RegisterSubmitted>(_onRegister);
     on<SetInitialPinSubmitted>(_onSetInitialPin);
     on<LogoutRequested>(_onLogout);
+    on<ForgotPasswordSubmitted>(_onForgotPassword);
+    on<ResetPasswordSubmitted>(_onResetPassword);
   }
 
   Future<void> _onCheckAuth(
@@ -61,7 +63,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // ── Register ─────────────────────────────────────────────────────────────
+  // ── Register ──────────────────────────────────────────────────────────────
   Future<void> _onRegister(
     RegisterSubmitted event,
     Emitter<AuthState> emit,
@@ -81,7 +83,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final token = data['api_token'] ?? data['token'] ?? '';
       final name  = '${event.firstName} ${event.lastName}';
 
-      // Tidak langsung login — harus set PIN dulu
       emit(RegisterSuccess(apiToken: token, name: name));
     } catch (e) {
       String message = 'Pendaftaran gagal. Coba lagi.';
@@ -120,5 +121,56 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     } catch (_) {}
     await ApiService.clearToken();
     emit(AuthUnauthenticated());
+  }
+
+  // ── Forgot Password ───────────────────────────────────────────────────────
+  Future<void> _onForgotPassword(
+    ForgotPasswordSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await ApiService.dio.post('/forgot-password', data: {
+        'email': event.email,
+      });
+      emit(ForgotPasswordSuccess(email: event.email));
+    } catch (e) {
+      String message = 'Gagal mengirim email. Coba lagi.';
+      try {
+        final response = (e as dynamic).response;
+        if (response?.statusCode == 404) {
+          message = 'Email tidak ditemukan di sistem kami.';
+        } else if (response?.data?['errors']?['email'] != null) {
+          message = response.data['errors']['email'];
+        }
+      } catch (_) {}
+      emit(AuthError(message));
+    }
+  }
+
+  // ── Reset Password ────────────────────────────────────────────────────────
+  Future<void> _onResetPassword(
+    ResetPasswordSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      await ApiService.dio.post('/reset-password', data: {
+        'token':                 event.token,
+        'email':                 event.email,
+        'password':              event.password,
+        'password_confirmation': event.passwordConfirmation,
+      });
+      emit(ResetPasswordSuccess());
+    } catch (e) {
+      String message = 'Gagal reset password. Link mungkin sudah kadaluarsa.';
+      try {
+        final response = (e as dynamic).response;
+        if (response?.data?['errors']?['token'] != null) {
+          message = response.data['errors']['token'];
+        }
+      } catch (_) {}
+      emit(AuthError(message));
+    }
   }
 }

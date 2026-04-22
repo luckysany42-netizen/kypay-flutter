@@ -47,3 +47,30 @@ class SetInitialPinSubmitted extends AuthEvent {
 class LogoutRequested extends AuthEvent {}
 
 class CheckAuthStatus extends AuthEvent {}
+
+// ✅ Kirim email lupa password
+class ForgotPasswordSubmitted extends AuthEvent {
+  final String email;
+  ForgotPasswordSubmitted({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}
+
+// ✅ Reset password dengan token dari email
+class ResetPasswordSubmitted extends AuthEvent {
+  final String token;
+  final String email;
+  final String password;
+  final String passwordConfirmation;
+
+  ResetPasswordSubmitted({
+    required this.token,
+    required this.email,
+    required this.password,
+    required this.passwordConfirmation,
+  });
+
+  @override
+  List<Object?> get props => [token, email, password, passwordConfirmation];
+}
