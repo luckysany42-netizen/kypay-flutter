@@ -8,6 +8,7 @@ import '../../blocs/topup/topup_event.dart';
 import '../../blocs/topup/topup_state.dart';
 import '../../blocs/wallet/wallet_bloc.dart';
 import '../../blocs/wallet/wallet_event.dart';
+import '../../widgets/money_input_sheet.dart';
 
 class TopUpScreen extends StatefulWidget {
   const TopUpScreen({super.key});
@@ -384,67 +385,63 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              TextField(
-                controller: _amountController,
-                keyboardType: TextInputType.number,
-                enabled: !isSubmitting,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  hintStyle: TextStyle(
+              GestureDetector(
+                onTap: isSubmitting
+                    ? null
+                    : () async {
+                        final result = await showMoneyInput(
+                          context,
+                          title: 'Jumlah Top Up',
+                          maxValue: null,
+                          quickAmounts: [50000, 100000, 200000, 500000, 1000000, 2000000],
+                          accentColor: const Color(0xFF1a56db),
+                        );
+                        if (result != null) {
+                          setState(() => _amountController.text = result.toInt().toString());
+                        }
+                      },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
                     //ignore: deprecated_member_use
-                      color: Colors.white.withOpacity(0.3), fontSize: 22),
-                  prefixText: 'Rp ',
-                  prefixStyle:
-                      const TextStyle(color: Colors.white70, fontSize: 18),
-                  filled: true,
-                  //ignore: deprecated_member_use
-                  fillColor: Colors.white.withOpacity(0.08),
-                  border: OutlineInputBorder(
+                    color: Colors.white.withOpacity(0.08),
+                    border: Border.all(
+                      //ignore: deprecated_member_use
+                        color: Colors.white.withOpacity(0.1)),
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF1a56db), width: 1.5),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rp ',
+                            style: TextStyle(
+                              //ignore: deprecated_member_use
+                                color: Colors.white.withOpacity(0.5), fontSize: 12),
+                          ),
+                          Text(
+                            _amountController.text.isEmpty
+                                ? '0'
+                                : formatRupiah(
+                                    double.tryParse(_amountController.text) ?? 0),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      Icon(
+                        isSubmitting ? Icons.check_circle : Icons.edit_outlined,
+                        color: const Color(0xFF1a56db),
+                        size: 20,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 8),
-
-              // Quick amount buttons
-              Row(
-                children: [10000, 50000, 100000, 500000].map((amt) {
-                  return Expanded(
-                    child: GestureDetector(
-                      onTap: () =>
-                          _amountController.text = amt.toString(),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 8),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        decoration: BoxDecoration(
-                          //ignore: deprecated_member_use
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            //ignore: deprecated_member_use
-                              color: Colors.white.withOpacity(0.1)),
-                        ),
-                        child: Text(
-                          amt >= 1000 ? '${amt ~/ 1000}rb' : '$amt',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            //ignore: deprecated_member_use
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 12),
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
               ),
 
               const SizedBox(height: 24),

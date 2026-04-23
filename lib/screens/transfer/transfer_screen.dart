@@ -14,7 +14,9 @@ import '../../blocs/qr/qr_event.dart';
 import '../../blocs/qr/qr_state.dart';
 import '../../blocs/contact/contact_bloc.dart';
 import '../../widgets/struk_widget.dart';
+import '../../widgets/money_input_sheet.dart';
 import '../../screens/contact/contact_screen.dart';
+import '../../services/api_service.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -320,17 +322,10 @@ class _TransferScreenState extends State<TransferScreen>
                       ),
                       child: Row(
                         children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.green,
+                          _buildReceiverAvatar(
+                            avatarUrl: state.ownerAvatar,
+                            name: state.ownerName,
                             radius: 22,
-                            child: Text(
-                              state.ownerName.isNotEmpty
-                                  ? state.ownerName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
-                            ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -369,40 +364,57 @@ class _TransferScreenState extends State<TransferScreen>
                             color: Colors.white.withOpacity(0.7),
                             fontWeight: FontWeight.w600)),
                     const SizedBox(height: 8),
-                    TextField(
-                      controller: _amountController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold),
-                      decoration: InputDecoration(
-                        hintText: 'Minimal Rp 1.000',
-                        hintStyle: TextStyle(
+                    GestureDetector(
+                      onTap: () async {
+                        final result = await showMoneyInput(
+                          context,
+                          title: 'Jumlah Transfer',
+                          subtitle: 'Saldo: ${formatRupiah(_currentBalance)}',
+                          maxValue: _currentBalance,
+                          quickAmounts: [25000, 50000, 100000, 200000, 300000, 500000],
+                          accentColor: const Color(0xFF0891b2),
+                        );
+                        if (result != null) {
+                          setState(() => _amountController.text = result.toInt().toString());
+                        }
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
                           //ignore: deprecated_member_use
-                            color: Colors.white.withOpacity(0.3)),
-                        prefixText: 'Rp ',
-                        prefixStyle:
-                            const TextStyle(color: Colors.white70),
-                        filled: true,
-                        //ignore: deprecated_member_use
-                        fillColor: Colors.white.withOpacity(0.08),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
+                          color: Colors.white.withOpacity(0.08),
+                          border: Border.all(
                             //ignore: deprecated_member_use
                               color: Colors.white.withOpacity(0.1)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            //ignore: deprecated_member_use
-                              color: Colors.white.withOpacity(0.1)),
                         ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(
-                              color: Color(0xFF0891b2)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Rp ',
+                                  style: TextStyle(
+                                    //ignore: deprecated_member_use
+                                      color: Colors.white.withOpacity(0.5), fontSize: 12),
+                                ),
+                                Text(
+                                  _amountController.text.isEmpty
+                                      ? '0'
+                                      : formatRupiah(
+                                          double.tryParse(_amountController.text) ?? 0),
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                            const Icon(Icons.edit_outlined,
+                                color: Color(0xFF0891b2), size: 20),
+                          ],
                         ),
                       ),
                     ),
@@ -827,36 +839,62 @@ class _TransferScreenState extends State<TransferScreen>
                       color: Colors.white.withOpacity(0.7),
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
-              TextField(
-                controller: _qrAmountController,
-                keyboardType: TextInputType.number,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold),
-                decoration: InputDecoration(
-                  hintText: '0',
-                  hintStyle: TextStyle(
+              GestureDetector(
+                onTap: () async {
+                  final result = await showMoneyInput(
+                    context,
+                    title: 'Jumlah yang Diminta',
+                    maxValue: null,
+                    quickAmounts: [25000, 50000, 100000, 200000, 300000, 500000],
+                    accentColor: const Color(0xFF0891b2),
+                  );
+                  if (result != null) {
+                    setState(() => _qrAmountController.text = result.toInt().toString());
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  decoration: BoxDecoration(
                     //ignore: deprecated_member_use
-                      color: Colors.white.withOpacity(0.3), fontSize: 22),
-                  prefixText: 'Rp ',
-                  prefixStyle:
-                      const TextStyle(color: Colors.white70, fontSize: 18),
-                  filled: true,
-                  //ignore: deprecated_member_use
-                  fillColor: Colors.white.withOpacity(0.08),
-                  border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none),
-                  focusedBorder: OutlineInputBorder(
+                    color: Colors.white.withOpacity(0.08),
+                    border: Border.all(
+                      //ignore: deprecated_member_use
+                        color: Colors.white.withOpacity(0.1)),
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: const BorderSide(
-                        color: Color(0xFF0891b2), width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Rp ',
+                            style: TextStyle(
+                              //ignore: deprecated_member_use
+                                color: Colors.white.withOpacity(0.5), fontSize: 12),
+                          ),
+                          Text(
+                            _qrAmountController.text.isEmpty
+                                ? '0'
+                                : formatRupiah(
+                                    double.tryParse(_qrAmountController.text) ?? 0),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                      ),
+                      const Icon(Icons.edit_outlined,
+                          color: Color(0xFF0891b2), size: 20),
+                    ],
                   ),
                 ),
               ),
 
               const SizedBox(height: 8),
+
               Row(
                 children: [10000, 20000, 50000, 100000].map((amt) {
                   return Expanded(
@@ -1267,6 +1305,66 @@ class _TransferScreenState extends State<TransferScreen>
               fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
             )),
       ],
+    );
+  }
+
+  Widget _buildReceiverAvatar({
+    required String? avatarUrl,
+    required String name,
+    double radius = 22,
+  }) {
+    final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      // Bangun URL lengkap jika bukan URL penuh
+      final fullUrl = avatarUrl.startsWith('http')
+          ? avatarUrl
+          : '${ApiService.baseUrl.replaceAll('/api', '/storage/')}$avatarUrl';
+
+      return CircleAvatar(
+        radius: radius,
+        backgroundColor: Colors.green,
+        child: ClipOval(
+          child: Image.network(
+            fullUrl,
+            width: radius * 2,
+            height: radius * 2,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Text(
+              initials,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: radius * 0.8,
+              ),
+            ),
+            loadingBuilder: (_, child, progress) {
+              if (progress == null) return child;
+              return Text(
+                initials,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: radius * 0.8,
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: Colors.green,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+          fontSize: radius * 0.8,
+        ),
+      ),
     );
   }
 
