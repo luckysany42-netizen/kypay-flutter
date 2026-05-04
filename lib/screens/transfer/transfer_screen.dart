@@ -8,6 +8,7 @@ import '../../blocs/transfer/transfer_bloc.dart';
 import '../../blocs/transfer/transfer_event.dart';
 import '../../blocs/transfer/transfer_state.dart';
 import '../../blocs/wallet/wallet_bloc.dart';
+import '../../services/api_service.dart';
 import '../../blocs/wallet/wallet_event.dart';
 import '../../blocs/qr/qr_bloc.dart';
 import '../../blocs/qr/qr_event.dart';
@@ -16,7 +17,6 @@ import '../../blocs/contact/contact_bloc.dart';
 import '../../widgets/struk_widget.dart';
 import '../../widgets/money_input_sheet.dart';
 import '../../screens/contact/contact_screen.dart';
-import '../../services/api_service.dart';
 
 class TransferScreen extends StatefulWidget {
   const TransferScreen({super.key});
@@ -37,6 +37,8 @@ class _TransferScreenState extends State<TransferScreen>
   int    _step                  = 1;
   double _currentBalance        = 0;
   String _receiverWalletNumber  = '';
+  String _receiverName          = ''; // ← Simpan nama penerima
+  String? _receiverAvatar       = null; // ← Simpan avatar penerima
 
   // ── Terima QR ──────────────────────────────
   final _qrAmountController = TextEditingController();
@@ -519,9 +521,7 @@ class _TransferScreenState extends State<TransferScreen>
   }
 
   Widget _buildStep2() {
-    final amount   = double.tryParse(_amountController.text) ?? 0;
-    final state    = context.read<TransferBloc>().state;
-    final receiver = state is TransferReceiverFound ? state : null;
+    final amount = double.tryParse(_amountController.text) ?? 0;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -539,26 +539,33 @@ class _TransferScreenState extends State<TransferScreen>
             ),
             child: Column(
               children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFF0891b2),
-                  radius: 30,
-                  child: Text(
-                    receiver?.ownerName.isNotEmpty == true
-                        ? receiver!.ownerName[0].toUpperCase()
-                        : '?',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
+                // Tampilkan avatar penerima dengan image jika ada
+                _receiverAvatar != null && _receiverAvatar!.isNotEmpty
+                    ? _buildReceiverAvatar(
+                        avatarUrl: _receiverAvatar,
+                        name: _receiverName,
+                        radius: 30,
+                      )
+                    : CircleAvatar(
+                        backgroundColor: const Color(0xFF0891b2),
+                        radius: 30,
+                        child: Text(
+                          _receiverName.isNotEmpty
+                              ? _receiverName[0].toUpperCase()
+                              : '?',
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ),
                 const SizedBox(height: 12),
-                Text(receiver?.ownerName ?? '',
+                Text(_receiverName,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold)),
-                Text(receiver?.walletNumber ?? '',
+                Text(_receiverWalletNumber,
                     style: TextStyle(
                       //ignore: deprecated_member_use
                         color: Colors.white.withOpacity(0.5),
@@ -1316,10 +1323,8 @@ class _TransferScreenState extends State<TransferScreen>
     final initials = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
     if (avatarUrl != null && avatarUrl.isNotEmpty) {
-      // Bangun URL lengkap jika bukan URL penuh
-      final fullUrl = avatarUrl.startsWith('http')
-          ? avatarUrl
-          : '${ApiService.baseUrl.replaceAll('/api', '/storage/')}$avatarUrl';
+      // Build full URL dari avatar path
+      final fullUrl = _buildAvatarUrl(avatarUrl);
 
       return CircleAvatar(
         radius: radius,
@@ -1368,6 +1373,23 @@ class _TransferScreenState extends State<TransferScreen>
     );
   }
 
+  /// Build full avatar URL dari response backend
+  /// Backend kirim: "/uploads/avatars/abc123.jpg"
+  /// Output: "http://[IP]:8000/uploads/avatars/abc123.jpg"
+  String _buildAvatarUrl(String avatar) {
+    if (avatar.startsWith('http')) return avatar; // Sudah URL lengkap
+    
+    final base = ApiService.baseUrl.replaceAll('/api', '');
+    
+    if (avatar.startsWith('/uploads')) {
+      // Relative path dari backend
+      return '$base$avatar';
+    } else {
+      // Hanya filename (fallback)
+      return '$base/uploads/avatars/$avatar';
+    }
+  }
+
   void _searchWallet() {    final number = _walletNumberController.text.trim();
     if (number.isEmpty) return;
     context.read<TransferBloc>().add(SearchWallet(number));
@@ -1390,6 +1412,8 @@ class _TransferScreenState extends State<TransferScreen>
     final state = context.read<TransferBloc>().state;
     if (state is TransferReceiverFound) {
       _receiverWalletNumber = state.walletNumber;
+      _receiverName = state.ownerName;
+      _receiverAvatar = state.ownerAvatar;
     }
     _pinController.clear();
     setState(() => _step = 2);

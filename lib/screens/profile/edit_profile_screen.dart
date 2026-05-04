@@ -266,7 +266,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             shape: BoxShape.circle,
                             border: Border.all(
                               //ignore: deprecated_member_use
-                              color: const Color(0xFF1a56db).withOpacity(0.4),
+                              color: const Color(0xFF1a56db).withOpacity(0.4),  
                               width: 2.5,
                             ),
                           ),
