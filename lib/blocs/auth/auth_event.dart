@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import '../../models/user_model.dart';
 
 abstract class AuthEvent extends Equatable {
   @override
@@ -47,6 +48,15 @@ class SetInitialPinSubmitted extends AuthEvent {
 class LogoutRequested extends AuthEvent {}
 
 class CheckAuthStatus extends AuthEvent {}
+
+// ✅ Update user data langsung dari response (untuk avatar upload)
+class UpdateUserData extends AuthEvent {
+  final UserModel user;
+  UpdateUserData(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
 
 // ✅ Kirim email lupa password
 class ForgotPasswordSubmitted extends AuthEvent {

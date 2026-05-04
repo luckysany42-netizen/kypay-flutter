@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:kypay/models/user_model.dart';
 import 'dart:io';
 import '../../blocs/auth/auth_bloc.dart';
 import '../../blocs/auth/auth_event.dart';
@@ -60,7 +61,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       source:       ImageSource.gallery,
       maxWidth:     800,
       maxHeight:    800,
-      imageQuality: 85,
+      imageQuality: 60, // Lebih rendah untuk kompatibilitas dengan HEIC/WebP
     );
     if (picked == null) return;
 
@@ -72,20 +73,110 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
 
     try {
+      final imageFile = File(picked.path);
+      
+      // Validasi file exist
+      if (!await imageFile.exists()) {
+        throw Exception('File tidak ditemukan');
+      }
+      
+      // Validasi ukuran file (max 5MB)
+      final fileSize = await imageFile.length();
+      if (fileSize > 5 * 1024 * 1024) {
+        throw Exception('Ukuran file terlalu besar (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB). Max 5MB');
+      }
+
+      // Generate unique filename dengan timestamp
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final filename = 'avatar_$timestamp.jpg';
+
       final formData = FormData.fromMap({
         'avatar': await MultipartFile.fromFile(
           picked.path,
-          filename: picked.name,
+          filename: filename,
+          contentType: DioMediaType.parse('image/jpeg'),
         ),
       });
-      await ApiService.dio.post('/profile/avatar', data: formData);
-      // ignore: use_build_context_synchronously
-      context.read<AuthBloc>().add(CheckAuthStatus());
-      if (mounted) setState(() => _successMsg = 'Foto profil berhasil diperbarui!');
+
+      print('📤 Uploading avatar: $filename (${(fileSize / 1024).toStringAsFixed(2)}KB)');
+      
+      // Ambil token untuk header Authorization
+      final token = await ApiService.getToken();
+      
+      final response = await ApiService.dio.post(
+        '/profile/avatar',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Token $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+      
+      print('✅ Avatar uploaded successfully');
+      print('📋 Response: ${response.data}');
+      
+      // Update user data langsung dari response
+      final responseData = response.data;
+      final userData = responseData['user'];
+
+      if (userData != null && mounted) {
+        final currentUser = (context.read<AuthBloc>().state as AuthAuthenticated).user;
+        
+        // Avatar dari response: bisa dari user.avatar atau top-level avatar
+        final avatarFilename = userData['avatar'] ?? responseData['avatar'];
+        
+        print('🖼️  [Avatar] Filename dari response: $avatarFilename');
+        
+        final updatedUser = UserModel(
+          id:        currentUser.id,
+          name:      currentUser.name,
+          email:     currentUser.email,
+          phone:     currentUser.phone,
+          avatar:    avatarFilename, // ← filename dari response (contoh: "60f7e9c.jpg")
+          role:      currentUser.role,
+          apiToken:  currentUser.apiToken,
+          jobTitle:  currentUser.jobTitle,
+          company:   currentUser.company,
+          bio:       currentUser.bio,
+        );
+        
+        print('🖼️  [Avatar] Updated avatarUrl: ${updatedUser.avatarUrl}');
+        
+        // ignore: use_build_context_synchronously
+        context.read<AuthBloc>().add(UpdateUserData(updatedUser));
+        
+        setState(() {
+          _successMsg = 'Foto profil berhasil diperbarui!';
+          _pickedImage = null;
+        });
+      }
     } catch (e) {
-      final data = (e as dynamic).response?.data;
-      final msg  = data?['message'] ?? 'Gagal mengunggah foto.';
-      if (mounted) setState(() { _errorMsg = msg.toString(); _pickedImage = null; });
+      print('❌ Error uploading avatar: $e');
+      
+      String errorMsg = 'Gagal mengunggah foto profil';
+      
+      // Parse error message
+      if (e is DioException) {
+        if (e.response?.data is Map) {
+          final data = e.response!.data as Map;
+          errorMsg = data['message'] ?? 
+                     data['error'] ?? 
+                     'Gagal mengunggah foto. Coba lagi.';
+        } else {
+          errorMsg = 'Error: ${e.response?.statusCode} - ${e.message}';
+        }
+      } else {
+        errorMsg = e.toString();
+      }
+      
+      if (mounted) {
+        setState(() { 
+          _errorMsg = errorMsg; 
+          _pickedImage = null; 
+        });
+      }
     } finally {
       if (mounted) setState(() => _avatarLoading = false);
     }
@@ -103,8 +194,28 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'job_title': _jobController.text.trim(),
         'company':   _companyController.text.trim(),
       });
-      // ignore: use_build_context_synchronously
-      context.read<AuthBloc>().add(CheckAuthStatus());
+      
+      // Update user data langsung tanpa verify_token
+      final state = context.read<AuthBloc>().state;
+      if (state is AuthAuthenticated) {
+        final user = state.user;
+        final updatedUser = UserModel(
+          id:        user.id,
+          name:      _nameController.text.trim(),
+          email:     user.email,
+          phone:     _phoneController.text.trim(),
+          avatar:    user.avatar, // ← field avatar (bukan avatarUrl yang getter!)
+          role:      user.role,
+          apiToken:  user.apiToken,
+          jobTitle:  _jobController.text.trim(),
+          company:   _companyController.text.trim(),
+          bio:       _bioController.text.trim(),
+        );
+        
+        print('✅ [Profile] Updated user: ${updatedUser.name} (avatar: ${updatedUser.avatar})');
+        // ignore: use_build_context_synchronously
+        context.read<AuthBloc>().add(UpdateUserData(updatedUser));
+      }
       if (mounted) setState(() => _successMsg = 'Profil berhasil diperbarui!');
     } catch (e) {
       final data = (e as dynamic).response?.data;
@@ -472,4 +583,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ),
     );
   }
+  
+  read() {}
 }

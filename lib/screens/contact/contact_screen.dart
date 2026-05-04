@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../blocs/contact/contact_bloc.dart';
+import '../../services/api_service.dart';
 
 class ContactScreen extends StatefulWidget {
   /// Jika [isSelector] = true (dipanggil dari Transfer),
@@ -339,9 +340,12 @@ class _ContactScreenState extends State<ContactScreen> {
   // ── Avatar ───────────────────────────────────────────────
   Widget _avatar(ContactModel c, {double radius = 22}) {
     if (c.ownerAvatar != null && c.ownerAvatar!.isNotEmpty) {
+      // Backend kirim filename saja, kita build URL lengkap
+      final avatarUrl = _buildAvatarUrl(c.ownerAvatar!);
+      
       return CircleAvatar(
         radius: radius,
-        backgroundImage: NetworkImage(c.ownerAvatar!),
+        backgroundImage: NetworkImage(avatarUrl),
         backgroundColor: const Color(0xFF0891b2),
         onBackgroundImageError: (_, __) {},
       );
@@ -357,6 +361,24 @@ class _ContactScreenState extends State<ContactScreen> {
             fontSize: radius * 0.8),
       ),
     );
+  }
+
+  /// Build full avatar URL dari response backend
+  /// Backend kirim: "/uploads/avatars/abc123.jpg"
+  /// Output: "http://10.0.2.2:8000/uploads/avatars/abc123.jpg"
+  String _buildAvatarUrl(String avatar) {
+    if (avatar.startsWith('http')) return avatar; // Sudah URL lengkap
+    
+    // Backend kirim relative path: "/uploads/avatars/filename"
+    final base = ApiService.baseUrl.replaceAll('/api', '');
+    
+    if (avatar.startsWith('/uploads')) {
+      // Relative path dari backend
+      return '$base$avatar';
+    } else {
+      // Hanya filename (fallback)
+      return '$base/uploads/avatars/$avatar';
+    }
   }
 
   // ── Tap handler ──────────────────────────────────────────

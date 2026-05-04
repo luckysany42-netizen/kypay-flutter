@@ -14,6 +14,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogout);
     on<ForgotPasswordSubmitted>(_onForgotPassword);
     on<ResetPasswordSubmitted>(_onResetPassword);
+    on<UpdateUserData>(_onUpdateUserData);
   }
 
   Future<void> _onCheckAuth(
@@ -29,11 +30,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final response = await ApiService.dio.post('/verify_token', data: {
         'api_token': token,
       });
+      print('✅ [Verify Token] Response: ${response.data}');
       final user = UserModel.fromJson(response.data);
+      print('✅ [Verify Token] User loaded: ${user.name} (token: ${user.apiToken.substring(0, 10)}...)');
       emit(AuthAuthenticated(user));
-    } catch (_) {
-      await ApiService.clearToken();
-      emit(AuthUnauthenticated());
+    } catch (e) {
+      print('❌ [Verify Token] Error: $e');
+      final errorStr = e.toString();
+      
+      // Hanya logout jika error 401 (Unauthorized) atau token invalid
+      if (errorStr.contains('401') || errorStr.contains('token') || errorStr.contains('expired')) {
+        print('🗑️  [Verify Token] Token invalid/expired → LOGOUT');
+        await ApiService.clearToken();
+        emit(AuthUnauthenticated());
+      } else {
+        // Jangan logout untuk error lain (network, dll) — keep current state
+        print('⚠️  [Verify Token] Network/parse error → Keep current state');
+        // Jika ada state sebelumnya, tetap gunakan itu
+      }
     }
   }
 
@@ -172,5 +186,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       } catch (_) {}
       emit(AuthError(message));
     }
+  }
+
+  // ── Update User Data (dari response upload avatar, dll) ────────────────────
+  Future<void> _onUpdateUserData(
+    UpdateUserData event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthAuthenticated(event.user));
   }
 }

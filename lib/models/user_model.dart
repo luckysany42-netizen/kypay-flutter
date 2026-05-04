@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../services/api_service.dart';
 
 class UserModel {
@@ -22,7 +23,7 @@ class UserModel {
     required this.apiToken,
     this.jobTitle,
     this.company,
-    this.bio,
+    this.bio, String? avatarUrl,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -41,13 +42,20 @@ class UserModel {
   }
 
   /// ✅ URL lengkap untuk ditampilkan di Image widget
-  /// Contoh: avatars/abc.jpg → http://10.0.2.2:8000/storage/avatars/abc.jpg
+  /// Backend format: avatar = "60f7e9c.jpg" atau "/uploads/avatars/60f7e9c.jpg"
+  /// Output: http://10.0.2.2:8000/uploads/avatars/60f7e9c.jpg
   String? get avatarUrl {
     if (avatar == null || avatar!.isEmpty) return null;
     if (avatar!.startsWith('http')) return avatar;
     
-    // Ikuti baseUrl dari ApiService
-    final base = ApiService.baseUrl.replaceAll('/api', '/storage/');
-    return '$base$avatar';
+    final base = ApiService.baseUrl.replaceAll('/api', '');
+    
+    // Jika backend kirim relative path: /uploads/avatars/filename
+    if (avatar!.startsWith('/uploads')) {
+      return '$base$avatar';
+    }
+    
+    // Jika hanya filename (fallback)
+    return '$base/uploads/avatars/$avatar';
   }
 }
