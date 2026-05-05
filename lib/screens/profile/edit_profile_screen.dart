@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:image/image.dart' as img;
 import 'package:kypay/models/user_model.dart';
 import 'dart:io';
 import '../../blocs/auth/auth_bloc.dart';
@@ -80,11 +81,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         throw Exception('File tidak ditemukan');
       }
       
-      // Validasi ukuran file (max 5MB)
+      // Validasi ukuran file original (max 5MB)
       final fileSize = await imageFile.length();
       if (fileSize > 5 * 1024 * 1024) {
         throw Exception('Ukuran file terlalu besar (${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB). Max 5MB');
       }
+
+      // ✅ COMPRESS IMAGE sebelum upload
+      final compressedFile = await _compressImage(imageFile);
+      final compressedSize = await compressedFile.length();
 
       // Generate unique filename dengan timestamp
       final timestamp = DateTime.now().millisecondsSinceEpoch;
@@ -92,13 +97,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
       final formData = FormData.fromMap({
         'avatar': await MultipartFile.fromFile(
-          picked.path,
+          compressedFile.path,
           filename: filename,
           contentType: DioMediaType.parse('image/jpeg'),
         ),
       });
 
-      print('📤 Uploading avatar: $filename (${(fileSize / 1024).toStringAsFixed(2)}KB)');
+      print('📤 Uploading avatar: $filename');
+      print('   Original: ${(fileSize / 1024).toStringAsFixed(2)}KB → Compressed: ${(compressedSize / 1024).toStringAsFixed(2)}KB');
       
       // Ambil token untuk header Authorization
       final token = await ApiService.getToken();
@@ -582,6 +588,47 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ],
       ),
     );
+  }
+  
+  /// Compress image sebelum upload
+  /// Input: original image (bisa besar)
+  /// Output: compressed JPEG file (~100-200 KB)
+  Future<File> _compressImage(File imageFile) async {
+    try {
+      // Baca image dari file
+      final imageData = await imageFile.readAsBytes();
+      
+      // Decode image
+      final originalImage = img.decodeImage(imageData);
+      if (originalImage == null) {
+        throw Exception('Gagal decode image');
+      }
+      
+      // Resize ke 400x400 max, maintain aspect ratio
+      final resized = img.copyResize(
+        originalImage,
+        width: 400,
+        height: 400,
+        interpolation: img.Interpolation.average,
+      );
+      
+      // Encode ke JPEG dengan quality 75%
+      final compressed = img.encodeJpg(resized, quality: 75);
+      
+      // Save ke temp file
+      final tempDir = Directory.systemTemp;
+      final compressedFile = File('${tempDir.path}/avatar_compressed.jpg');
+      await compressedFile.writeAsBytes(compressed);
+      
+      // ignore: avoid_print
+      print('✅ Image compressed: ${(imageData.length / 1024).toStringAsFixed(2)}KB → ${(compressed.length / 1024).toStringAsFixed(2)}KB');
+      
+      return compressedFile;
+    } catch (e) {
+      // ignore: avoid_print
+      print('⚠️ Compression failed: $e, using original');
+      return imageFile; // Fallback ke original kalau error
+    }
   }
   
   read() {}

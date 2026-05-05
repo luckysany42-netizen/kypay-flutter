@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../blocs/contact/contact_bloc.dart';
 import '../../services/api_service.dart';
 
@@ -343,11 +344,21 @@ class _ContactScreenState extends State<ContactScreen> {
       // Backend kirim filename saja, kita build URL lengkap
       final avatarUrl = _buildAvatarUrl(c.ownerAvatar!);
       
+      // DEBUG: print URL dan contact data
+      // ignore: avoid_print
+      print('🖼️ Avatar URL: $avatarUrl (original: ${c.ownerAvatar})');
+      
       return CircleAvatar(
         radius: radius,
-        backgroundImage: NetworkImage(avatarUrl),
         backgroundColor: const Color(0xFF0891b2),
-        onBackgroundImageError: (_, __) {},
+        backgroundImage: CachedNetworkImageProvider(
+          avatarUrl,
+          cacheKey: c.ownerAvatar,
+          errorListener: (p0) {
+            // ignore: avoid_print
+            print('❌ Avatar load error for $avatarUrl: $p0');
+          },
+        ),
       );
     }
     return CircleAvatar(
