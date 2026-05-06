@@ -38,6 +38,7 @@ class _TransferScreenState extends State<TransferScreen>
   double _currentBalance        = 0;
   String _receiverWalletNumber  = '';
   String _receiverName          = ''; // ← Simpan nama penerima
+  // ignore: avoid_init_to_null
   String? _receiverAvatar       = null; // ← Simpan avatar penerima
 
   // ── Terima QR ──────────────────────────────

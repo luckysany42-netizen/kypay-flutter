@@ -103,7 +103,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       });
 
+      // ignore: avoid_print
       print('📤 Uploading avatar: $filename');
+      // ignore: avoid_print
       print('   Original: ${(fileSize / 1024).toStringAsFixed(2)}KB → Compressed: ${(compressedSize / 1024).toStringAsFixed(2)}KB');
       
       // Ambil token untuk header Authorization
@@ -120,7 +122,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ),
       );
       
+      // ignore: avoid_print
       print('✅ Avatar uploaded successfully');
+      // ignore: avoid_print
       print('📋 Response: ${response.data}');
       
       // Update user data langsung dari response
@@ -133,6 +137,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         // Avatar dari response: bisa dari user.avatar atau top-level avatar
         final avatarFilename = userData['avatar'] ?? responseData['avatar'];
         
+        // ignore: avoid_print
         print('🖼️  [Avatar] Filename dari response: $avatarFilename');
         
         final updatedUser = UserModel(
@@ -148,6 +153,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           bio:       currentUser.bio,
         );
         
+        // ignore: avoid_print
         print('🖼️  [Avatar] Updated avatarUrl: ${updatedUser.avatarUrl}');
         
         // ignore: use_build_context_synchronously
@@ -159,6 +165,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         });
       }
     } catch (e) {
+      // ignore: avoid_print
       print('❌ Error uploading avatar: $e');
       
       String errorMsg = 'Gagal mengunggah foto profil';
@@ -168,8 +175,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         if (e.response?.data is Map) {
           final data = e.response!.data as Map;
           errorMsg = data['message'] ?? 
-                     data['error'] ?? 
-                     'Gagal mengunggah foto. Coba lagi.';
+                    data['error'] ?? 
+                    'Gagal mengunggah foto. Coba lagi.';
         } else {
           errorMsg = 'Error: ${e.response?.statusCode} - ${e.message}';
         }
@@ -202,6 +209,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       });
       
       // Update user data langsung tanpa verify_token
+      // ignore: use_build_context_synchronously
       final state = context.read<AuthBloc>().state;
       if (state is AuthAuthenticated) {
         final user = state.user;
@@ -218,6 +226,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           bio:       _bioController.text.trim(),
         );
         
+        // ignore: avoid_print
         print('✅ [Profile] Updated user: ${updatedUser.name} (avatar: ${updatedUser.avatar})');
         // ignore: use_build_context_synchronously
         context.read<AuthBloc>().add(UpdateUserData(updatedUser));
@@ -226,9 +235,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     } catch (e) {
       final data = (e as dynamic).response?.data;
       final msg  = data?['errors']?['name']  ??
-                   data?['errors']?['phone'] ??
-                   data?['message']          ??
-                   'Gagal memperbarui profil.';
+                  data?['errors']?['phone'] ??
+                  data?['message']          ??
+                  'Gagal memperbarui profil.';
       if (mounted) setState(() => _errorMsg = msg.toString());
     } finally {
       if (mounted) setState(() => _loading = false);

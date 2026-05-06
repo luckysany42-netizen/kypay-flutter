@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
@@ -30,22 +31,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final response = await ApiService.dio.post('/verify_token', data: {
         'api_token': token,
       });
-      print('✅ [Verify Token] Response: ${response.data}');
+      debugPrint('✅ [Verify Token] Response: ${response.data}');
       final user = UserModel.fromJson(response.data);
-      print('✅ [Verify Token] User loaded: ${user.name} (token: ${user.apiToken.substring(0, 10)}...)');
+      if (kDebugMode) {
+        print('✅ [Verify Token] User loaded: ${user.name} (token: ${user.apiToken.substring(0, 10)}...)');
+      }
       emit(AuthAuthenticated(user));
     } catch (e) {
-      print('❌ [Verify Token] Error: $e');
+      if (kDebugMode) {
+        print('❌ [Verify Token] Error: $e');
+      }
       final errorStr = e.toString();
       
       // Hanya logout jika error 401 (Unauthorized) atau token invalid
       if (errorStr.contains('401') || errorStr.contains('token') || errorStr.contains('expired')) {
-        print('🗑️  [Verify Token] Token invalid/expired → LOGOUT');
+        if (kDebugMode) {
+          print('🗑️  [Verify Token] Token invalid/expired → LOGOUT');
+        }
         await ApiService.clearToken();
         emit(AuthUnauthenticated());
       } else {
         // Jangan logout untuk error lain (network, dll) — keep current state
-        print('⚠️  [Verify Token] Network/parse error → Keep current state');
+        if (kDebugMode) {
+          print('⚠️  [Verify Token] Network/parse error → Keep current state');
+        }
         // Jika ada state sebelumnya, tetap gunakan itu
       }
     }
