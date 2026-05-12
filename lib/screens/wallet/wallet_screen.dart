@@ -492,7 +492,7 @@ class _WalletScreenState extends State<WalletScreen>
                                 Navigator.pushNamed(context, '/payment'),
                           ),
                           const SizedBox(width: 12),
-                          // ✅ Ganti PIN (gantikan QR)
+                          // Ganti PIN (gantikan QR)
                           _buildActionButton(
                             icon: Icons.shield_outlined,
                             label: 'Ganti PIN',

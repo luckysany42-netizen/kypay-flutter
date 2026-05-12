@@ -101,7 +101,7 @@ class _TransferScreenState extends State<TransferScreen>
               color: Colors.white, fontWeight: FontWeight.bold),
         ),
         actions: [
-          // ✅ Tombol buka kontak — pakai BlocProvider.value agar
+          // Tombol buka kontak — pakai BlocProvider.value agar
           // ContactBloc dari main.dart digunakan (bukan baru)
           IconButton(
             icon: const Icon(Icons.contacts, color: Colors.white),
@@ -140,7 +140,7 @@ class _TransferScreenState extends State<TransferScreen>
             listener: (context, state) {
               if (state is TransferSuccess) {
                 context.read<WalletBloc>().add(FetchWallet());
-                // ✅ Refresh kontak otomatis setelah transfer berhasil
+                // Refresh kontak otomatis setelah transfer berhasil
                 // supaya penerima baru langsung muncul di daftar kontak
                 context.read<ContactBloc>().add(FetchContacts());
                 setState(() => _step = 3);
@@ -731,7 +731,7 @@ class _TransferScreenState extends State<TransferScreen>
                         fontSize: 12)),
                 const SizedBox(height: 40),
 
-                // ✅ Tombol Lihat Struk
+                // Tombol Lihat Struk
                 SizedBox(
                   width: double.infinity,
                   height: 48,

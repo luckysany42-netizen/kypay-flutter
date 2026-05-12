@@ -91,7 +91,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (_pinConfirm.length == 6) {
         Future.delayed(const Duration(milliseconds: 300), () {
           if (_pinConfirm == _pin) {
-            // ✅ Submit PIN ke backend
+            //Submit PIN ke backend
             //ignore: use_build_context_synchronously
             context.read<AuthBloc>().add(SetInitialPinSubmitted(
               pin:      _pin,

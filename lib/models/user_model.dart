@@ -8,9 +8,9 @@ class UserModel {
   final String? avatar;
   final String  role;
   final String  apiToken;
-  final String? jobTitle;   // ✅ field nyata
-  final String? company;    // ✅ field nyata
-  final String? bio;        // ✅ field nyata
+  final String? jobTitle;   
+  final String? company;    
+  final String? bio;        
 
   UserModel({
     required this.id,
@@ -34,13 +34,13 @@ class UserModel {
       avatar:   json['avatar'],
       role:     json['role']      ?? 'user',
       apiToken: json['api_token'] ?? '',
-      jobTitle: json['job_title'], // ✅ sesuai kolom di database (snake_case)
+      jobTitle: json['job_title'],
       company:  json['company'],
       bio:      json['bio'],
     );
   }
 
-  /// ✅ URL lengkap untuk ditampilkan di Image widget
+  /// URL lengkap untuk ditampilkan di Image widget
   /// Backend format: avatar = "60f7e9c.jpg" atau "/uploads/avatars/60f7e9c.jpg"
   /// Output: http://10.0.2.2:8000/uploads/avatars/60f7e9c.jpg
   String? get avatarUrl {

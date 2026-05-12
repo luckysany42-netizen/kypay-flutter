@@ -34,7 +34,7 @@ class ApiService {
           final prefs = await SharedPreferences.getInstance();
           final token = prefs.getString('api_token');
 
-          // ✅ DEBUG — lihat token dan URL di terminal Flutter
+          // DEBUG — lihat token dan URL di terminal Flutter
           if (kDebugMode) {
             print('🌐 [API] ${options.method} ${options.uri}');
           }
@@ -48,7 +48,7 @@ class ApiService {
           return handler.next(options);
         },
         onError: (error, handler) {
-          // ✅ DEBUG — lihat error detail
+          // DEBUG — lihat error detail
           if (kDebugMode) {
             print('❌ [API ERROR] ${error.response?.statusCode} - ${error.requestOptions.uri}');
           }

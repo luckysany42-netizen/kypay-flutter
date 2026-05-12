@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    // ✅ Tombol Lupa Password
+                    // Tombol Lupa Password
                     GestureDetector(
                       onTap: () => Navigator.push(
                         context,
