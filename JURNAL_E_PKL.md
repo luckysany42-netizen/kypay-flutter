@@ -66,6 +66,16 @@ Format response yang diharapkan adalah JSON object yang berisi semua field user 
 
 ---
 
+## RINGKASAN AKTIVITAS PERIODE 3 (11-12 Mei 2026)
+
+### KENDALA: Aplikasi Logout Otomatis Saat Dibuka Ulang
+
+Setelah proses debugging avatar, muncul bug baru di mana aplikasi selalu menampilkan halaman login setiap kali dibuka ulang, padahal user sudah login sebelumnya. Token masih tersimpan di SharedPreferences, tetapi saat aplikasi melakukan verify token, terjadi error parsing dengan pesan `type 'Null' is not a subtype of type 'int'`. Penyebab utama adalah endpoint `/verify_token` mengembalikan response dengan struktur `{success: true, user: {...}}`, namun code di auth_bloc mencoba memparsing langsung seluruh response object sebagai user, sehingga field `id` menjadi null dan menyebabkan type casting error.
+
+Solusi diterapkan pada dua tempat: Pertama, di `auth_bloc.dart` method `_onCheckAuth()` dimodifikasi untuk mengekstrak field `user` dari response sebelum memparsing ke UserModel, dengan fallback ke entire response jika `user` field tidak ada. Kedua, di `user_model.dart` method `fromJson()` diperbaiki dengan menambahkan safe casting untuk field `id` dan memberikan default value 0 jika nilai null. Hasil dari perbaikan ini adalah aplikasi dapat memverifikasi token dengan benar saat startup, user tetap login dan tidak perlu login ulang, dan error parsing tidak lagi terjadi.
+
+---
+
 ## PEMBELAJARAN KUNCI DAN INSIGHTS
 
 Dari proses debugging dan troubleshooting yang telah dilakukan, terdapat beberapa pembelajaran penting yang dapat diambil untuk pengembangan project ke depannya. Pertama, mengenai image compatibility, kompresi yang aggressive dengan quality 60 terbukti lebih penting dibanding menjaga visual quality untuk mencegah decode error di Android device lama. Trade-off antara ukuran file dan kompatibilitas perlu dipertimbangkan dengan matang.

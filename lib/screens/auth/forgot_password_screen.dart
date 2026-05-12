@@ -297,7 +297,7 @@ class _ForgotPasswordSuccessScreen extends StatelessWidget {
 
               const SizedBox(height: 48),
 
-              // Info box
+              // Info box 
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -354,4 +354,4 @@ class _ForgotPasswordSuccessScreen extends StatelessWidget {
       ),
     );
   }
-}
+}  

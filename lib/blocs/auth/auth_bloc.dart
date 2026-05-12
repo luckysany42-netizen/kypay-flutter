@@ -32,7 +32,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'api_token': token,
       });
       debugPrint('✅ [Verify Token] Response: ${response.data}');
-      final user = UserModel.fromJson(response.data);
+      
+      // Extract user from response (response has {success: true, user: {...}})
+      final userData = response.data['user'] ?? response.data;
+      final user = UserModel.fromJson(userData);
       if (kDebugMode) {
         print('✅ [Verify Token] User loaded: ${user.name} (token: ${user.apiToken.substring(0, 10)}...)');
       }
