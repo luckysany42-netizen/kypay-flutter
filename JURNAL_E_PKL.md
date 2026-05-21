@@ -74,6 +74,14 @@ Setelah proses debugging avatar, muncul bug baru di mana aplikasi selalu menampi
 
 Solusi diterapkan pada dua tempat: Pertama, di `auth_bloc.dart` method `_onCheckAuth()` dimodifikasi untuk mengekstrak field `user` dari response sebelum memparsing ke UserModel, dengan fallback ke entire response jika `user` field tidak ada. Kedua, di `user_model.dart` method `fromJson()` diperbaiki dengan menambahkan safe casting untuk field `id` dan memberikan default value 0 jika nilai null. Hasil dari perbaikan ini adalah aplikasi dapat memverifikasi token dengan benar saat startup, user tetap login dan tidak perlu login ulang, dan error parsing tidak lagi terjadi.
 
+### KENDALA 2: Git Merge Conflict Saat Pull Dari Remote
+
+Setelah melakukan fix pada token verification bug dan jurnal e-PKL, saat mencoba `git push origin main` mendapat error `[rejected] main -> main (non-fast-forward)`. Penyebab masalahnya adalah branch lokal tertinggal dari remote—ada commit baru di GitHub yang belum ada di lokal. Setelah `git pull origin main`, terjadi merge conflict karena perubahan yang dibuat lokal (fix token verification dan update jurnal) bertabrakan dengan commit lama yang belum tersinkronisasi. Merge conflict ini menghasilkan merge commit yang membuat git history tidak linear dan terlihat berantakan dengan banyak commit yang menunjuk ke berbagai arah.
+
+Solusi yang diterapkan adalah dengan melakukan `git reset --soft HEAD~1` untuk undo merge commit sambil mempertahankan semua changes yang sudah dilakukan. Setelah itu, melakukan `git push --force-with-lease origin main` untuk memaksa push dengan safety check agar tidak menghilangkan commit orang lain (karena project hanya digunakan sendiri, force push aman dilakukan). Pelajaran penting dari issue ini adalah menggunakan `git pull --rebase origin main` alih-alih `git pull origin main` biasa, karena rebase akan membuat history tetap linear tanpa merge commit yang membuat log berantakan. Untuk kedepannya, dikonfigurasi `git config pull.rebase true` agar setiap `git pull` otomatis menggunakan rebase strategy.
+
+Hasil dari solusi ini adalah git history kembali linear dan rapi, semua commit tersusun dengan baik tanpa merge commit yang mengganggu, dan workflow menjadi lebih clean untuk dokumentasi project nantinya.
+
 ---
 
 ## PEMBELAJARAN KUNCI DAN INSIGHTS
@@ -87,10 +95,10 @@ Keempat, mengenai authorization headers, FormData upload memerlukan explicit Aut
 ---
 
 **Status:** ✅ **COMPLETED**  
-**Total Periode:** 6 hari (1-6 Mei 2026)  
-**Total Waktu Debugging:** ~6 jam  
-**Issues Fixed:** 5 major issues  
-**Teknologi yang Digunakan:** Flutter, Dio, BLoC Pattern, Image Picker, FormData  
+**Total Periode:** 3 periode (1-12 Mei 2026)  
+**Total Waktu Debugging:** ~8 jam  
+**Issues Fixed:** 7 major issues (5 app bugs + 2 git/workflow issues)  
+**Teknologi yang Digunakan:** Flutter, Dio, BLoC Pattern, Image Picker, FormData, Git Rebase  
 
 ---
 
