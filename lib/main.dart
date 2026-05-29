@@ -8,6 +8,7 @@ import 'blocs/transfer/transfer_bloc.dart';
 import 'blocs/topup/topup_bloc.dart';
 import 'blocs/payment/payment_bloc.dart';
 import 'blocs/contact/contact_bloc.dart';
+import 'blocs/merchant/merchant_bloc.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
 import 'screens/transfer/transfer_screen.dart';
@@ -47,6 +48,7 @@ class KyPayApp extends StatelessWidget {
                   BlocProvider(create: (_) => PaymentBloc()),
                   BlocProvider(create: (_) => QrBloc()),
                   BlocProvider(create: (_) => ContactBloc()),
+                  BlocProvider(create: (_) => MerchantBloc()),
                 ],
                 child: const _AuthenticatedApp(),
               );

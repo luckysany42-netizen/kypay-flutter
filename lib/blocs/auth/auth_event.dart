@@ -9,9 +9,7 @@ abstract class AuthEvent extends Equatable {
 class LoginSubmitted extends AuthEvent {
   final String email;
   final String password;
-
   LoginSubmitted({required this.email, required this.password});
-
   @override
   List<Object?> get props => [email, password];
 }
@@ -22,7 +20,6 @@ class RegisterSubmitted extends AuthEvent {
   final String phone;
   final String email;
   final String password;
-
   RegisterSubmitted({
     required this.firstName,
     required this.lastName,
@@ -30,57 +27,75 @@ class RegisterSubmitted extends AuthEvent {
     required this.email,
     required this.password,
   });
-
   @override
   List<Object?> get props => [firstName, lastName, phone, email, password];
 }
 
-class SetInitialPinSubmitted extends AuthEvent {
-  final String pin;
-  final String apiToken;
+// ── OTP Events (BARU) ─────────────────────────────────────────────────────────
 
-  SetInitialPinSubmitted({required this.pin, required this.apiToken});
-
+class SendOtpRequested extends AuthEvent {
+  final String phone;
+  final String purpose;
+  SendOtpRequested({required this.phone, this.purpose = 'register'});
   @override
-  List<Object?> get props => [pin, apiToken];
+  List<Object?> get props => [phone, purpose];
 }
 
-class LogoutRequested extends AuthEvent {}
+class VerifyOtpSubmitted extends AuthEvent {
+  final String phone;
+  final String code;
+  final String purpose;
+  VerifyOtpSubmitted({
+    required this.phone,
+    required this.code,
+    this.purpose = 'register',
+  });
+  @override
+  List<Object?> get props => [phone, code, purpose];
+}
 
+// ── PIN Events ────────────────────────────────────────────────────────────────
+
+class SetInitialPinSubmitted extends AuthEvent {
+  final String pin;
+  final String apiToken;   // ← ganti dari phone ke apiToken
+  SetInitialPinSubmitted({required this.pin, required this.apiToken});
+  @override
+  List<Object?> get props => [pin, apiToken];
+
+  get phone => null;
+}
+
+// ── Auth Events ───────────────────────────────────────────────────────────────
+
+class LogoutRequested extends AuthEvent {}
 class CheckAuthStatus extends AuthEvent {}
 
-// ✅ Update user data langsung dari response (untuk avatar upload)
 class UpdateUserData extends AuthEvent {
   final UserModel user;
   UpdateUserData(this.user);
-
   @override
   List<Object?> get props => [user];
 }
 
-// ✅ Kirim email lupa password
 class ForgotPasswordSubmitted extends AuthEvent {
   final String email;
   ForgotPasswordSubmitted({required this.email});
-
   @override
   List<Object?> get props => [email];
 }
 
-// ✅ Reset password dengan token dari email
 class ResetPasswordSubmitted extends AuthEvent {
   final String token;
   final String email;
   final String password;
   final String passwordConfirmation;
-
   ResetPasswordSubmitted({
     required this.token,
     required this.email,
     required this.password,
     required this.passwordConfirmation,
   });
-
   @override
   List<Object?> get props => [token, email, password, passwordConfirmation];
 }

@@ -21,7 +21,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
     try {
       // Fetch wallet dan transaksi sekaligus
       final walletRes = await ApiService.dio.get('/wallet');
-      final trxRes    = await ApiService.dio.get('/wallet/transactions');
+      final trxRes    = await ApiService.dio.get('/wallet/all-transactions');
 
       final data = walletRes.data['data'] ??
                    walletRes.data['wallet'] ??
@@ -42,7 +42,7 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
   ) async {
     if (_wallet == null) return;
     try {
-      final response    = await ApiService.dio.get('/wallet/transactions');
+      final response    = await ApiService.dio.get('/wallet/all-transactions');
       _transactions     = response.data['data'] ?? [];
       emit(WalletLoaded(wallet: _wallet!, transactions: _transactions));
     } catch (e) {

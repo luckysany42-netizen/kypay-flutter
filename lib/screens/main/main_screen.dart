@@ -26,9 +26,7 @@ class _MainScreenState extends State<MainScreen> {
     _screens = [
       WalletScreen(openHistoryTab: () => _onTabTapped(1)),
       const HistoryScreen(),
-      const SizedBox(), // QR (tidak dipakai langsung)
-      // ✅ ContactScreen dibungkus BlocProvider.value agar pakai
-      // ContactBloc yang sama dari MultiBlocProvider di main.dart
+      const SizedBox(), // QR — tidak langsung ditampilkan
       BlocProvider.value(
         value: context.read<ContactBloc>()..add(FetchContacts()),
         child: const ContactScreen(),
@@ -39,7 +37,7 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onTabTapped(int index) {
     if (index == 2) {
-      // ✅ QR fullscreen modal (seperti GoPay)
+      // QR fullscreen modal
       context.read<QrBloc>().add(ResetQr());
       Navigator.push(
         context,
@@ -52,16 +50,13 @@ class _MainScreenState extends State<MainScreen> {
             position: Tween<Offset>(
               begin: const Offset(0, 1),
               end: Offset.zero,
-            ).animate(
-              CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
-            ),
+            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
       );
       return;
     }
-
     setState(() => _currentIndex = index);
   }
 
@@ -81,17 +76,11 @@ class _MainScreenState extends State<MainScreen> {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF0d1829),
-        border: Border(
-          //ignore: deprecated_member_use
-          top: BorderSide(color: Colors.white.withOpacity(0.08)),
-        ),
+        //ignore: deprecated_member_use
+        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.08))),
         boxShadow: [
-          BoxShadow(
-            //ignore: deprecated_member_use
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
+          //ignore: deprecated_member_use
+          BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 20, offset: const Offset(0, -4)),
         ],
       ),
       child: SafeArea(
@@ -99,23 +88,10 @@ class _MainScreenState extends State<MainScreen> {
           height: 68,
           child: Row(
             children: [
-              // Beranda
-              _buildNavItem(
-                0,
-                Icons.home_rounded,
-                Icons.home_outlined,
-                'Beranda',
-              ),
+              _buildNavItem(0, Icons.home_rounded,          Icons.home_outlined,          'Beranda'),
+              _buildNavItem(1, Icons.receipt_long_rounded,  Icons.receipt_long_outlined,  'Riwayat'),
 
-              // Riwayat
-              _buildNavItem(
-                1,
-                Icons.receipt_long_rounded,
-                Icons.receipt_long_outlined,
-                'Riwayat',
-              ),
-
-              // 🔥 QR tombol tengah (floating style)
+              // QR tengah
               Expanded(
                 child: GestureDetector(
                   onTap: () => _onTabTapped(2),
@@ -123,53 +99,30 @@ class _MainScreenState extends State<MainScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Container(
-                        width: 54,
-                        height: 54,
+                        width: 54, height: 54,
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFF1a56db),
-                              Color(0xFF3b82f6),
-                            ],
+                            colors: [Color(0xFF1a56db), Color(0xFF3b82f6)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           shape: BoxShape.circle,
                           boxShadow: [
-                            BoxShadow(
-                              //ignore: deprecated_member_use
-                              color: const Color(0xFF1a56db).withOpacity(0.5),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
+                            //ignore: deprecated_member_use
+                            BoxShadow(color: const Color(0xFF1a56db).withOpacity(0.5),
+                              blurRadius: 12, offset: const Offset(0, 4)),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.qr_code_scanner_rounded,
-                          color: Colors.white,
-                          size: 26,
-                        ),
+                        child: const Icon(Icons.qr_code_scanner_rounded,
+                          color: Colors.white, size: 26),
                       ),
                     ],
                   ),
                 ),
               ),
 
-              // ✅ Kontak
-              _buildNavItem(
-                3,
-                Icons.people_rounded,
-                Icons.people_outline_rounded,
-                'Kontak',
-              ),
-
-              // Profil
-              _buildNavItem(
-                4,
-                Icons.person_rounded,
-                Icons.person_outline_rounded,
-                'Profil',
-              ),
+              _buildNavItem(3, Icons.people_rounded,  Icons.people_outline_rounded,  'Kontak'),
+              _buildNavItem(4, Icons.person_rounded,  Icons.person_outline_rounded,  'Profil'),
             ],
           ),
         ),
@@ -177,14 +130,8 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
-  Widget _buildNavItem(
-    int index,
-    IconData activeIcon,
-    IconData inactiveIcon,
-    String label,
-  ) {
+  Widget _buildNavItem(int index, IconData activeIcon, IconData inactiveIcon, String label) {
     final isActive = _currentIndex == index;
-
     return Expanded(
       child: GestureDetector(
         onTap: () => _onTabTapped(index),
@@ -194,24 +141,20 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             Icon(
               isActive ? activeIcon : inactiveIcon,
-              color: isActive
-                  ? const Color(0xFF1a56db)
+              color: isActive ? const Color(0xFF1a56db)
                   //ignore: deprecated_member_use
                   : Colors.white.withOpacity(0.4),
               size: 24,
             ),
             const SizedBox(height: 3),
-            Text(
-              label,
+            Text(label,
               style: TextStyle(
-                color: isActive
-                    ? const Color(0xFF1a56db)
-                    // ignore: deprecated_member_use
+                color: isActive ? const Color(0xFF1a56db)
+                    //ignore: deprecated_member_use
                     : Colors.white.withOpacity(0.4),
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w700 : FontWeight.normal,
-              ),
-            ),
+              )),
           ],
         ),
       ),

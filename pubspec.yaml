@@ -41,6 +41,7 @@ dependencies:
   image_picker: ^1.0.7
   qr_flutter: ^4.1.0          # render QR code
   mobile_scanner: ^3.5.6      # scan QR code (stable version)
+  uuid: ^4.3.3
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.

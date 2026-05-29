@@ -7,10 +7,15 @@ import 'auth_event.dart';
 import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
+  // Simpan nama sementara untuk diteruskan dari Register → OTP → PIN → Sukses
+  String _pendingName = '';
+
   AuthBloc() : super(AuthInitial()) {
     on<CheckAuthStatus>(_onCheckAuth);
     on<LoginSubmitted>(_onLogin);
     on<RegisterSubmitted>(_onRegister);
+    on<SendOtpRequested>(_onSendOtp);       // BARU
+    on<VerifyOtpSubmitted>(_onVerifyOtp);   // BARU
     on<SetInitialPinSubmitted>(_onSetInitialPin);
     on<LogoutRequested>(_onLogout);
     on<ForgotPasswordSubmitted>(_onForgotPassword);
@@ -18,6 +23,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<UpdateUserData>(_onUpdateUserData);
   }
 
+  // ── Check Auth ────────────────────────────────────────────────────────────
   Future<void> _onCheckAuth(
     CheckAuthStatus event,
     Emitter<AuthState> emit,
@@ -31,38 +37,21 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       final response = await ApiService.dio.post('/verify_token', data: {
         'api_token': token,
       });
-      debugPrint('✅ [Verify Token] Response: ${response.data}');
-      
-      // Extract user from response (response has {success: true, user: {...}})
       final userData = response.data['user'] ?? response.data;
       final user = UserModel.fromJson(userData);
-      if (kDebugMode) {
-        print('✅ [Verify Token] User loaded: ${user.name} (token: ${user.apiToken.substring(0, 10)}...)');
-      }
+      if (kDebugMode) print('✅ [Auth] Token valid: ${user.name}');
       emit(AuthAuthenticated(user));
     } catch (e) {
-      if (kDebugMode) {
-        print('❌ [Verify Token] Error: $e');
-      }
       final errorStr = e.toString();
-      
-      // Hanya logout jika error 401 (Unauthorized) atau token invalid
       if (errorStr.contains('401') || errorStr.contains('token') || errorStr.contains('expired')) {
-        if (kDebugMode) {
-          print('🗑️  [Verify Token] Token invalid/expired → LOGOUT');
-        }
+        if (kDebugMode) print('🗑️  [Auth] Token expired → logout');
         await ApiService.clearToken();
         emit(AuthUnauthenticated());
-      } else {
-        // Jangan logout untuk error lain (network, dll) — keep current state
-        if (kDebugMode) {
-          print('⚠️  [Verify Token] Network/parse error → Keep current state');
-        }
-        // Jika ada state sebelumnya, tetap gunakan itu
       }
     }
   }
 
+  // ── Login ─────────────────────────────────────────────────────────────────
   Future<void> _onLogin(
     LoginSubmitted event,
     Emitter<AuthState> emit,
@@ -73,7 +62,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'phone':    event.email,
         'password': event.password,
       });
-
       final data  = response.data;
       final token = data['api_token'] ?? data['token'] ?? '';
       final user  = UserModel.fromJson(data);
@@ -89,7 +77,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // ── Register ──────────────────────────────────────────────────────────────
+  // ── Register → otomatis kirim OTP ────────────────────────────────────────
   Future<void> _onRegister(
     RegisterSubmitted event,
     Emitter<AuthState> emit,
@@ -105,21 +93,121 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         'password_confirmation': event.password,
       });
 
-      final data  = response.data;
-      final token = data['api_token'] ?? data['token'] ?? '';
-      final name  = '${event.firstName} ${event.lastName}';
+      final data = response.data;
 
-      emit(RegisterSuccess(apiToken: token, name: name));
+      // Simpan nama sementara untuk ditampilkan di layar sukses
+      _pendingName = '${event.firstName} ${event.lastName}';
+
+      // Backend sudah otomatis kirim OTP — ambil data dari response
+      final phoneMasked       = data['data']?['phone_masked']       ?? event.phone;
+      final expiresInSeconds  = data['data']?['expires_in_seconds'] ?? 300;
+      final cooldownSeconds   = data['data']?['cooldown_seconds']   ?? 60;
+
+      if (kDebugMode) print('✅ [Register] Berhasil, OTP dikirim ke $phoneMasked');
+
+      emit(RegisterSuccess(
+        phone:            event.phone,
+        phoneMasked:      phoneMasked,
+        name:             _pendingName,
+        expiresInSeconds: expiresInSeconds,
+        cooldownSeconds:  cooldownSeconds,
+      ));
     } catch (e) {
       String message = 'Pendaftaran gagal. Coba lagi.';
-      if (e.toString().contains('422') || e.toString().contains('email')) {
-        message = 'Email sudah terdaftar. Gunakan email lain.';
-      }
+      try {
+        final response = (e as dynamic).response;
+        if (response?.statusCode == 422) {
+          final errors = response?.data?['errors'];
+          if (errors?['email'] != null) message = 'Email sudah terdaftar.';
+          else if (errors?['phone'] != null) message = 'Nomor HP sudah terdaftar.';
+        }
+      } catch (_) {}
       emit(AuthError(message));
     }
   }
 
-  // ── Set Initial PIN setelah register ─────────────────────────────────────
+  // ── Send / Resend OTP ─────────────────────────────────────────────────────
+  Future<void> _onSendOtp(
+    SendOtpRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final response = await ApiService.dio.post('/otp/send', data: {
+        'phone':   event.phone,
+        'purpose': event.purpose,
+      });
+
+      final data = response.data['data'];
+
+      if (kDebugMode) print('✅ [OTP] Terkirim ke ${data['phone_masked']}');
+
+      emit(OtpSent(
+        phone:            event.phone,
+        phoneMasked:      data['phone_masked']       ?? event.phone,
+        expiresInSeconds: data['expires_in_seconds'] ?? 300,
+        cooldownSeconds:  data['cooldown_seconds']   ?? 60,
+      ));
+    } catch (e) {
+      // Handle cooldown (HTTP 429)
+      try {
+        final response = (e as dynamic).response;
+        if (response?.statusCode == 429) {
+          final cooldown = response?.data?['data']?['cooldown_remaining'] ?? 60;
+          emit(OtpCooldown(cooldownRemaining: cooldown));
+          return;
+        }
+      } catch (_) {}
+      emit(OtpError(message: 'Gagal mengirim OTP. Coba lagi.'));
+    }
+  }
+
+  // ── Verify OTP ────────────────────────────────────────────────────────────
+  Future<void> _onVerifyOtp(
+    VerifyOtpSubmitted event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(AuthLoading());
+    try {
+      final response = await ApiService.dio.post('/otp/verify', data: {
+        'phone':   event.phone,
+        'code':    event.code,
+        'purpose': event.purpose,
+      });
+
+      if (kDebugMode) print('✅ [OTP] Verified: ${event.phone}');
+
+      final data      = response.data['data'];
+      final apiToken  = data['api_token'] ?? '';
+
+      // Simpan token supaya bisa dipakai set PIN
+      if (apiToken.isNotEmpty) {
+        await ApiService.setToken(apiToken);
+      }
+
+      // OTP verified → lanjut ke layar Buat PIN
+      emit(OtpVerified(
+        phone:    event.phone,
+        name:     _pendingName,
+        apiToken: apiToken,
+      ));
+    } catch (e) {
+      String message = 'Kode OTP tidak valid atau sudah kedaluwarsa.';
+      int? remainingAttempts;
+
+      try {
+        final response = (e as dynamic).response;
+        if (response?.statusCode == 422) {
+          message           = response?.data?['message'] ?? message;
+          remainingAttempts = response?.data?['data']?['remaining_attempts'];
+        }
+      } catch (_) {}
+
+      emit(OtpError(message: message, remainingAttempts: remainingAttempts));
+    }
+  }
+
+  // ── Set Initial PIN setelah OTP verified ─────────────────────────────────
   Future<void> _onSetInitialPin(
     SetInitialPinSubmitted event,
     Emitter<AuthState> emit,
@@ -127,10 +215,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(AuthLoading());
     try {
       await ApiService.dio.post('/wallet/set-initial-pin', data: {
-        'api_token':        event.apiToken,
+        'api_token':        event.apiToken,   // ← ganti dari phone ke api_token
         'pin':              event.pin,
         'pin_confirmation': event.pin,
       });
+
+      if (kDebugMode) print('✅ [PIN] PIN berhasil dibuat untuk ${event.phone}');
+
       emit(PinSetSuccess());
     } catch (e) {
       emit(AuthError('Gagal membuat PIN. Coba lagi.'));
@@ -138,13 +229,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   // ── Logout ────────────────────────────────────────────────────────────────
-  Future<void> _onLogout(
-    LogoutRequested event,
-    Emitter<AuthState> emit,
-  ) async {
-    try {
-      await ApiService.dio.post('/logout');
-    } catch (_) {}
+  Future<void> _onLogout(LogoutRequested event, Emitter<AuthState> emit) async {
+    try { await ApiService.dio.post('/logout'); } catch (_) {}
     await ApiService.clearToken();
     emit(AuthUnauthenticated());
   }
@@ -156,19 +242,13 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   ) async {
     emit(AuthLoading());
     try {
-      await ApiService.dio.post('/forgot-password', data: {
-        'email': event.email,
-      });
+      await ApiService.dio.post('/forgot-password', data: {'email': event.email});
       emit(ForgotPasswordSuccess(email: event.email));
     } catch (e) {
       String message = 'Gagal mengirim email. Coba lagi.';
       try {
         final response = (e as dynamic).response;
-        if (response?.statusCode == 404) {
-          message = 'Email tidak ditemukan di sistem kami.';
-        } else if (response?.data?['errors']?['email'] != null) {
-          message = response.data['errors']['email'];
-        }
+        if (response?.statusCode == 404) message = 'Email tidak ditemukan.';
       } catch (_) {}
       emit(AuthError(message));
     }
@@ -189,22 +269,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       });
       emit(ResetPasswordSuccess());
     } catch (e) {
-      String message = 'Gagal reset password. Link mungkin sudah kadaluarsa.';
-      try {
-        final response = (e as dynamic).response;
-        if (response?.data?['errors']?['token'] != null) {
-          message = response.data['errors']['token'];
-        }
-      } catch (_) {}
-      emit(AuthError(message));
+      emit(AuthError('Gagal reset password. Link mungkin sudah kadaluarsa.'));
     }
   }
 
-  // ── Update User Data (dari response upload avatar, dll) ────────────────────
-  Future<void> _onUpdateUserData(
-    UpdateUserData event,
-    Emitter<AuthState> emit,
-  ) async {
+  // ── Update User ───────────────────────────────────────────────────────────
+  Future<void> _onUpdateUserData(UpdateUserData event, Emitter<AuthState> emit) async {
     emit(AuthAuthenticated(event.user));
   }
 }
