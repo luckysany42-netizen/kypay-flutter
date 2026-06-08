@@ -24,3 +24,7 @@ class SubmitTopUp extends TopUpEvent {
 }
 
 class ResetTopUp extends TopUpEvent {}
+
+/// Dipanggil saat WalletBloc selesai fetch wallet
+/// untuk cek apakah ada top up yang baru diapprove
+class CheckApprovedTopUp extends TopUpEvent {}

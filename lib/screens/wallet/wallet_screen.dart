@@ -8,9 +8,12 @@ import '../../blocs/auth/auth_event.dart';
 import '../../blocs/wallet/wallet_bloc.dart';
 import '../../blocs/wallet/wallet_event.dart';
 import '../../blocs/wallet/wallet_state.dart';
+import '../../blocs/topup/topup_bloc.dart';
+import '../../blocs/topup/topup_state.dart';
 import '../../blocs/merchant/merchant_bloc.dart';
 import '../../blocs/merchant/merchant_event.dart';
 import '../../blocs/merchant/merchant_state.dart';
+import '../../widgets/struk_widget.dart';
 import '../merchant/merchant_home_screen.dart';
 import '../merchant/merchant_input_screen.dart';
 
@@ -37,7 +40,7 @@ class _WalletScreenState extends State<WalletScreen>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     );
-    context.read<WalletBloc>().add(FetchWallet());
+    context.read<WalletBloc>().add(FetchWallet(topUpBloc: context.read<TopUpBloc>()));
 
     final merchantState = context.read<MerchantBloc>().state;
     if (merchantState is FeaturedLoaded) {
@@ -55,7 +58,7 @@ class _WalletScreenState extends State<WalletScreen>
 
   void _onRefresh() {
     _refreshController.repeat();
-    context.read<WalletBloc>().add(FetchWallet());
+    context.read<WalletBloc>().add(FetchWallet(topUpBloc: context.read<TopUpBloc>()));
     Future.delayed(const Duration(milliseconds: 900), () {
       if (mounted) _refreshController.stop();
     });
@@ -123,12 +126,26 @@ class _WalletScreenState extends State<WalletScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0f1b35),
-      body: BlocListener<MerchantBloc, MerchantState>(
-        listener: (context, state) {
-          if (state is FeaturedLoaded) {
-            setState(() => _cachedMerchants = state.merchants);
-          }
-        },
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<MerchantBloc, MerchantState>(
+            listener: (context, state) {
+              if (state is FeaturedLoaded) {
+                setState(() => _cachedMerchants = state.merchants);
+              }
+            },
+          ),
+          // BARU: listener untuk popup top up approved
+          BlocListener<TopUpBloc, TopUpState>(
+            listener: (context, state) {
+              if (state is TopUpApproved) {
+                _showTopUpApprovedPopup(context, state);
+              } else if (state is TopUpRejected) {
+                _showTopUpRejectedPopup(context, state);
+              }
+            },
+          ),
+        ],
         child: BlocBuilder<WalletBloc, WalletState>(
           builder: (context, state) {
             if (state is WalletLoaded || state is WalletError) {
@@ -489,6 +506,332 @@ class _WalletScreenState extends State<WalletScreen>
         ),
       ),
     );
+  }
+
+  void _showTopUpApprovedPopup(BuildContext context, TopUpApproved state) {
+    final fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    
+    // Simpan context dan state untuk digunakan di dalam dialog
+    final savedContext = context;
+    final savedState = state;
+
+    // Tampilkan popup notifikasi terlebih dahulu
+    showDialog(
+      context: savedContext,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        backgroundColor: const Color(0xFF0d1829),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Icon animasi
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (_, val, child) => Transform.scale(scale: val, child: child),
+                child: Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    //ignore: deprecated_member_use
+                    color: Colors.green.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    //ignore: deprecated_member_use
+                    border: Border.all(color: Colors.green.withOpacity(0.4), width: 2),
+                  ),
+                  child: const Icon(Icons.check_circle_rounded,
+                    color: Colors.green, size: 48),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              const Text(
+                'Top Up Berhasil!',
+                style: TextStyle(
+                  color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Saldo kamu sudah bertambah',
+                //ignore: deprecated_member_use
+                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Nominal
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  //ignore: deprecated_member_use
+                  color: const Color(0xFF1a56db).withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(12),
+                  //ignore: deprecated_member_use
+                  border: Border.all(color: const Color(0xFF1a56db).withOpacity(0.3)),
+                ),
+                child: Column(children: [
+                  Text(fmt.format(savedState.amount),
+                    style: const TextStyle(
+                      color: Color(0xFF1a56db), fontSize: 26, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 4),
+                  Text('via ${savedState.methodName}',
+                    //ignore: deprecated_member_use
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+                ]),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Tombol Lihat Struk
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(savedContext, rootNavigator: true).pop(); // dismiss popup sementara
+                    Future.delayed(const Duration(milliseconds: 300), () {
+                      // Tampilkan struk, dan setelah ditutup, tampilkan popup lagi
+                      showStrukModal(
+                        savedContext,
+                        StrukWidget(
+                          type:            'top_up',
+                          amount:          savedState.amount,
+                          referenceNumber: savedState.referenceNumber,
+                          productName:     'Top Up Saldo KyPay',
+                          provider:        savedState.methodName,
+                          targetNumber:    '-',
+                          targetLabel:     'Metode',
+                          paymentMethod:   savedState.methodName,
+                          tanggal:         _parseDate(savedState.approvedAt),
+                        ),
+                      ).then((_) {
+                        // Setelah struk ditutup, tampilkan popup lagi
+                        _showTopUpApprovedPopup(savedContext, savedState);
+                      });
+                    });
+                  },
+                  icon: const Icon(Icons.receipt_long, size: 18),
+                  label: const Text('Lihat Struk'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: const Color(0xFF1a56db),
+                    side: const BorderSide(color: Color(0xFF1a56db)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              // Tombol OK
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(savedContext, rootNavigator: true).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1a56db),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('OK, Terima Kasih!',
+                    style: TextStyle(
+                      color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showTopUpRejectedPopup(BuildContext context, TopUpRejected state) {
+    final fmt = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        backgroundColor: const Color(0xFF0d1829),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+
+              // ── Icon animasi ────────────────────────────────────────────
+              TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.elasticOut,
+                builder: (_, val, child) => Transform.scale(scale: val, child: child),
+                child: Container(
+                  width: 80, height: 80,
+                  decoration: BoxDecoration(
+                    //ignore: deprecated_member_use
+                    color: Colors.red.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                    //ignore: deprecated_member_use
+                    border: Border.all(color: Colors.red.withOpacity(0.4), width: 2),
+                  ),
+                  child: const Icon(Icons.cancel_rounded, color: Colors.red, size: 48),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // ── Title ───────────────────────────────────────────────────
+              const Text(
+                'Top Up Ditolak',
+                style: TextStyle(
+                  color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+              ),
+
+              const SizedBox(height: 8),
+
+              Text(
+                'Pengajuan kamu tidak dapat disetujui',
+                //ignore: deprecated_member_use
+                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Nominal ─────────────────────────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                decoration: BoxDecoration(
+                  //ignore: deprecated_member_use
+                  color: Colors.red.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  //ignore: deprecated_member_use
+                  border: Border.all(color: Colors.red.withOpacity(0.25)),
+                ),
+                child: Column(children: [
+                  Text(
+                    fmt.format(state.amount),
+                    style: const TextStyle(
+                      color: Colors.red, fontSize: 24, fontWeight: FontWeight.w900),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'via ${state.methodName}',
+                    //ignore: deprecated_member_use
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                  ),
+                ]),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── Alasan penolakan dari admin ──────────────────────────────
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  //ignore: deprecated_member_use
+                  color: Colors.orange.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  //ignore: deprecated_member_use
+                  border: Border.all(color: Colors.orange.withOpacity(0.25)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(children: [
+                      const Icon(Icons.info_outline, color: Colors.orange, size: 15),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Alasan Penolakan',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ]),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.adminNote,
+                      style: TextStyle(
+                        //ignore: deprecated_member_use
+                        color: Colors.white.withOpacity(0.85),
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // ── No. Referensi ────────────────────────────────────────────
+              Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Icon(Icons.tag,
+                  //ignore: deprecated_member_use
+                  color: Colors.white.withOpacity(0.3), size: 13),
+                const SizedBox(width: 4),
+                Text(
+                  'Ref: ${state.referenceNumber}',
+                  //ignore: deprecated_member_use
+                  style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 12),
+                ),
+              ]),
+
+              const SizedBox(height: 8),
+
+              // ── Info pengajuan ulang ──────────────────────────────────────
+              Text(
+                'Kamu dapat mengajukan top up ulang\nsetelah memperbaiki bukti transfer.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  //ignore: deprecated_member_use
+                  color: Colors.white.withOpacity(0.4),
+                  fontSize: 12,
+                  height: 1.5,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ── Tombol OK ────────────────────────────────────────────────
+              SizedBox(
+                width: double.infinity,
+                height: 46,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Mengerti',
+                    style: TextStyle(
+                      color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  DateTime _parseDate(String raw) {
+    try {
+      return DateTime.parse(raw).toLocal();
+    } catch (_) {
+      return DateTime.now();
+    }
   }
 
   // ── Merchant grid (6 featured + QR + Lihat Semua) ─────────────────────────

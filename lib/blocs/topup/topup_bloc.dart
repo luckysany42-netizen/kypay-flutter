@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/api_service.dart';
 import 'topup_event.dart';
 import 'topup_state.dart';
@@ -10,6 +11,7 @@ class TopUpBloc extends Bloc<TopUpEvent, TopUpState> {
     on<SelectPaymentMethod>(_onSelectMethod);
     on<SubmitTopUp>(_onSubmit);
     on<ResetTopUp>(_onReset);
+    on<CheckApprovedTopUp>(_onCheckApproved); // BARU
   }
 
   List<dynamic> _methods = [];
@@ -22,7 +24,6 @@ class TopUpBloc extends Bloc<TopUpEvent, TopUpState> {
     emit(TopUpMethodsLoading());
     try {
       final response = await ApiService.dio.get('/topup/payment-methods');
-      // Response: { success: true, data: [...] }
       _methods = response.data['data'] ?? response.data ?? [];
       emit(TopUpMethodsLoaded(methods: _methods, selectedMethod: _selectedMethod));
     } catch (e) {
@@ -44,25 +45,17 @@ class TopUpBloc extends Bloc<TopUpEvent, TopUpState> {
   ) async {
     emit(TopUpSubmitting(methods: _methods, selectedMethod: _selectedMethod));
     try {
-      // ✅ Field names sesuai TopUpController@store di Laravel:
-      // - payment_method  → nama bank/metode (string)
-      // - payment_account → nomor rekening (string)
-      // - payment_holder  → nama pemilik rekening (string)
-      // - amount          → jumlah (numeric)
-      // - proof_image     → file gambar
       final formData = FormData.fromMap({
-        'amount':           event.amount.toInt(),
-        'payment_method':   event.paymentMethod,   // nama bank, misal "BCA Transfer"
-        'payment_account':  event.paymentAccount,  // nomor rekening
-        'payment_holder':   event.paymentHolder,   // nama pemilik
+        'amount':          event.amount.toInt(),
+        'payment_method':  event.paymentMethod,
+        'payment_account': event.paymentAccount,
+        'payment_holder':  event.paymentHolder,
         'proof_image': await MultipartFile.fromFile(
           event.imagePath,
           filename: 'bukti_transfer.jpg',
         ),
       });
 
-      // ✅ Endpoint yang benar: /topup/ (POST)
-      // Bukan /topup/request — route itu tidak ada di api.php
       final response = await ApiService.dio.post(
         '/topup/',
         data: formData,
@@ -92,5 +85,87 @@ class TopUpBloc extends Bloc<TopUpEvent, TopUpState> {
   void _onReset(ResetTopUp event, Emitter<TopUpState> emit) {
     _selectedMethod = null;
     emit(TopUpInitial());
+  }
+
+  // ── Cek top up yang baru diapprove ──────────────────────────────────────
+  // Dipanggil oleh WalletBloc setelah fetch wallet berhasil.
+  // Membandingkan ID top up approved terbaru dengan yang terakhir dilihat user
+  // (disimpan di SharedPreferences) untuk mendeteksi approval baru.
+  Future<void> _onCheckApproved(
+    CheckApprovedTopUp event,
+    Emitter<TopUpState> emit,
+  ) async {
+    try {
+      final prefs        = await SharedPreferences.getInstance();
+      final lastSeenApprovedId   = prefs.getInt('last_seen_approved_topup_id') ?? 0;
+
+      // Fetch riwayat top up user
+      final response     = await ApiService.dio.get('/topup/');
+      final list         = response.data['data'] as List? ?? [];
+
+      // ── Cek top up dengan status 'approved' yang belum pernah dilihat ──
+      final newlyApproved = list.where((trx) {
+        final status = trx['status']?.toString().toLowerCase() ?? '';
+        final id     = int.tryParse(trx['id'].toString()) ?? 0;
+        return status == 'approved' && id > lastSeenApprovedId;
+      }).toList();
+
+      if (newlyApproved.isNotEmpty) {
+        // Ambil yang terbaru
+        final latest = newlyApproved.reduce((a, b) {
+          final aId = int.tryParse(a['id'].toString()) ?? 0;
+          final bId = int.tryParse(b['id'].toString()) ?? 0;
+          return aId > bId ? a : b;
+        });
+
+        // Simpan ID terbaru supaya tidak muncul lagi di refresh berikutnya
+        final latestId = int.tryParse(latest['id'].toString()) ?? 0;
+        await prefs.setInt('last_seen_approved_topup_id', latestId);
+
+        emit(TopUpApproved(
+          amount:          (latest['amount'] as num?)?.toDouble() ?? 0,
+          methodName:      latest['payment_method']?.toString() ?? 'Transfer',
+          referenceNumber: latest['reference_number']?.toString()
+              ?? latest['id']?.toString()
+              ?? '-',
+          approvedAt:      latest['updated_at']?.toString()
+              ?? DateTime.now().toIso8601String(),
+        ));
+        return; // Hanya emit satu event, jangan lanjut ke rejected check
+      }
+
+      // ── Cek top up dengan status 'rejected' yang belum pernah dilihat ──
+      final lastSeenRejectedId = prefs.getInt('last_seen_rejected_topup_id') ?? 0;
+
+      final newlyRejected = list.where((trx) {
+        final status = trx['status']?.toString().toLowerCase() ?? '';
+        final id     = int.tryParse(trx['id'].toString()) ?? 0;
+        return status == 'rejected' && id > lastSeenRejectedId;
+      }).toList();
+
+      if (newlyRejected.isNotEmpty) {
+        final latest = newlyRejected.reduce((a, b) {
+          final aId = int.tryParse(a['id'].toString()) ?? 0;
+          final bId = int.tryParse(b['id'].toString()) ?? 0;
+          return aId > bId ? a : b;
+        });
+
+        final latestRejectedId = int.tryParse(latest['id'].toString()) ?? 0;
+        await prefs.setInt('last_seen_rejected_topup_id', latestRejectedId);
+
+        emit(TopUpRejected(
+          amount:          (latest['amount'] as num?)?.toDouble() ?? 0,
+          methodName:      latest['payment_method']?.toString() ?? 'Transfer',
+          referenceNumber: latest['reference_number']?.toString()
+              ?? latest['id']?.toString()
+              ?? '-',
+          adminNote:       latest['admin_note']?.toString() ?? 'Tidak ada keterangan.',
+          rejectedAt:      latest['reviewed_at']?.toString()
+              ?? DateTime.now().toIso8601String(),
+        ));
+      }
+    } catch (_) {
+      // Silent fail — jangan ganggu UX jika cek gagal
+    }
   }
 }

@@ -24,7 +24,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
   final _picker = ImagePicker();
 
   String formatRupiah(double val) {
-    return NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(val);
+    return NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    ).format(val);
   }
 
   @override
@@ -73,9 +77,12 @@ class _TopUpScreenState extends State<TopUpScreen> {
           _step == 1
               ? 'Top Up KyPay'
               : _step == 2
-                  ? 'Detail Top Up'
-                  : 'Pengajuan Terkirim',
-          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ? 'Detail Top Up'
+              : 'Pengajuan Terkirim',
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         bottom: _step < 3
             ? PreferredSize(
@@ -95,7 +102,10 @@ class _TopUpScreenState extends State<TopUpScreen> {
             setState(() => _step = 3);
           } else if (state is TopUpError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
             );
           }
         },
@@ -127,10 +137,14 @@ class _TopUpScreenState extends State<TopUpScreen> {
               children: [
                 const Icon(Icons.error_outline, color: Colors.red, size: 48),
                 const SizedBox(height: 12),
-                Text(state.message, style: const TextStyle(color: Colors.white)),
+                Text(
+                  state.message,
+                  style: const TextStyle(color: Colors.white),
+                ),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () => context.read<TopUpBloc>().add(FetchPaymentMethods()),
+                  onPressed: () =>
+                      context.read<TopUpBloc>().add(FetchPaymentMethods()),
                   child: const Text('Coba Lagi'),
                 ),
               ],
@@ -152,17 +166,26 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     color: const Color(0xFF1a56db).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     //ignore: deprecated_member_use
-                    border: Border.all(color: const Color(0xFF1a56db).withOpacity(0.3)),
+                    border: Border.all(
+                      color: const Color(0xFF1a56db).withOpacity(0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.info_outline, color: Color(0xFF1a56db), size: 18),
+                      const Icon(
+                        Icons.info_outline,
+                        color: Color(0xFF1a56db),
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
                           'Pilih metode pembayaran. Admin akan memverifikasi bukti transfer kamu.',
                           //ignore: deprecated_member_use
-                          style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.8),
+                            fontSize: 12,
+                          ),
                         ),
                       ),
                     ],
@@ -196,17 +219,19 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   )
                 else
                   ...state.methods.map((method) {
-                    final isSelected = state.selectedMethod != null &&
+                    final isSelected =
+                        state.selectedMethod != null &&
                         state.selectedMethod!['id'] == method['id'];
                     return GestureDetector(
-                      onTap: () =>
-                          context.read<TopUpBloc>().add(SelectPaymentMethod(method)),
+                      onTap: () => context.read<TopUpBloc>().add(
+                        SelectPaymentMethod(method),
+                      ),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color: isSelected
-                          //ignore: deprecated_member_use
+                              //ignore: deprecated_member_use
                               ? const Color(0xFF1a56db).withOpacity(0.15)
                               //ignore: deprecated_member_use
                               : Colors.white.withOpacity(0.05),
@@ -229,8 +254,45 @@ class _TopUpScreenState extends State<TopUpScreen> {
                                 color: const Color(0xFF1a56db).withOpacity(0.2),
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              child: const Icon(Icons.account_balance,
-                                  color: Color(0xFF1a56db), size: 22),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: method['logo'] != null
+                                    ? Image.network(
+                                        method['logo'] as String,
+                                        fit: BoxFit.cover,
+                                        errorBuilder:
+                                            (context, error, stackTrace) {
+                                              return const Icon(
+                                                Icons.account_balance,
+                                                color: Color(0xFF1a56db),
+                                                size: 22,
+                                              );
+                                            },
+                                        loadingBuilder:
+                                            (context, child, loadingProgress) {
+                                              if (loadingProgress == null)
+                                                return child;
+                                              return const Center(
+                                                child: SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                          Color
+                                                        >(Color(0xFF1a56db)),
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                      )
+                                    : const Icon(
+                                        Icons.account_balance,
+                                        color: Color(0xFF1a56db),
+                                        size: 22,
+                                      ),
+                              ),
                             ),
                             const SizedBox(width: 14),
                             Expanded(
@@ -269,8 +331,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
                               ),
                             ),
                             if (isSelected)
-                              const Icon(Icons.check_circle,
-                                  color: Color(0xFF1a56db), size: 22),
+                              const Icon(
+                                Icons.check_circle,
+                                color: Color(0xFF1a56db),
+                                size: 22,
+                              ),
                           ],
                         ),
                       ),
@@ -290,14 +355,18 @@ class _TopUpScreenState extends State<TopUpScreen> {
                       backgroundColor: const Color(0xFF1a56db),
                       disabledBackgroundColor: Colors.white12,
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: Text(
-                      state.selectedMethod == null ? 'Pilih metode dulu' : 'Lanjut',
+                      state.selectedMethod == null
+                          ? 'Pilih metode dulu'
+                          : 'Lanjut',
                       style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -346,8 +415,43 @@ class _TopUpScreenState extends State<TopUpScreen> {
                         color: const Color(0xFF1a56db).withOpacity(0.2),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: const Icon(Icons.account_balance,
-                          color: Color(0xFF1a56db), size: 20),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: method != null && method['logo'] != null
+                            ? Image.network(
+                                method['logo'] as String,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.account_balance,
+                                    color: Color(0xFF1a56db),
+                                    size: 20,
+                                  );
+                                },
+                                loadingBuilder:
+                                    (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return const Center(
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Color(0xFF1a56db),
+                                                ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                              )
+                            : const Icon(
+                                Icons.account_balance,
+                                color: Color(0xFF1a56db),
+                                size: 20,
+                              ),
+                      ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
@@ -357,7 +461,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                           Text(
                             method != null ? method['name'] ?? '' : '',
                             style: const TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w600),
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                           Text(
                             method != null
@@ -365,7 +471,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                                 : '',
                             style: TextStyle(
                               //ignore: deprecated_member_use
-                                color: Colors.white.withOpacity(0.5), fontSize: 12),
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -381,8 +489,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 'Jumlah Top Up',
                 style: TextStyle(
                   //ignore: deprecated_member_use
-                    color: Colors.white.withOpacity(0.7),
-                    fontWeight: FontWeight.w600),
+                  color: Colors.white.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
               GestureDetector(
@@ -393,21 +502,36 @@ class _TopUpScreenState extends State<TopUpScreen> {
                           context,
                           title: 'Jumlah Top Up',
                           maxValue: null,
-                          quickAmounts: [50000, 100000, 200000, 500000, 1000000, 2000000],
+                          quickAmounts: [
+                            50000,
+                            100000,
+                            200000,
+                            500000,
+                            1000000,
+                            2000000,
+                          ],
                           accentColor: const Color(0xFF1a56db),
                         );
                         if (result != null) {
-                          setState(() => _amountController.text = result.toInt().toString());
+                          setState(
+                            () => _amountController.text = result
+                                .toInt()
+                                .toString(),
+                          );
                         }
                       },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
                   decoration: BoxDecoration(
                     //ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.08),
                     border: Border.all(
                       //ignore: deprecated_member_use
-                        color: Colors.white.withOpacity(0.1)),
+                      color: Colors.white.withOpacity(0.1),
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -420,17 +544,22 @@ class _TopUpScreenState extends State<TopUpScreen> {
                             'Rp ',
                             style: TextStyle(
                               //ignore: deprecated_member_use
-                                color: Colors.white.withOpacity(0.5), fontSize: 12),
+                              color: Colors.white.withOpacity(0.5),
+                              fontSize: 12,
+                            ),
                           ),
                           Text(
                             _amountController.text.isEmpty
                                 ? '0'
                                 : formatRupiah(
-                                    double.tryParse(_amountController.text) ?? 0),
+                                    double.tryParse(_amountController.text) ??
+                                        0,
+                                  ),
                             style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                       ),
@@ -451,8 +580,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 'Upload Bukti Transfer',
                 style: TextStyle(
                   //ignore: deprecated_member_use
-                    color: Colors.white.withOpacity(0.7),
-                    fontWeight: FontWeight.w600),
+                  color: Colors.white.withOpacity(0.7),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 8),
 
@@ -467,7 +597,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _proofImage != null
-                      //ignore: deprecated_member_use
+                          //ignore: deprecated_member_use
                           ? Colors.green.withOpacity(0.5)
                           //ignore: deprecated_member_use
                           : Colors.white.withOpacity(0.15),
@@ -492,8 +622,11 @@ class _TopUpScreenState extends State<TopUpScreen> {
                                       color: Colors.red,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: const Icon(Icons.close,
-                                        color: Colors.white, size: 14),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 14,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -503,25 +636,29 @@ class _TopUpScreenState extends State<TopUpScreen> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.cloud_upload_outlined,
-                            //ignore: deprecated_member_use
-                                color: Colors.white.withOpacity(0.3),
-                                size: 36),
+                            Icon(
+                              Icons.cloud_upload_outlined,
+                              //ignore: deprecated_member_use
+                              color: Colors.white.withOpacity(0.3),
+                              size: 36,
+                            ),
                             const SizedBox(height: 8),
                             Text(
                               'Tap untuk upload bukti transfer',
                               style: TextStyle(
                                 //ignore: deprecated_member_use
-                                  color: Colors.white.withOpacity(0.4),
-                                  fontSize: 13),
+                                color: Colors.white.withOpacity(0.4),
+                                fontSize: 13,
+                              ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'JPG, PNG (maks. 2MB)',
                               style: TextStyle(
                                 //ignore: deprecated_member_use
-                                  color: Colors.white.withOpacity(0.25),
-                                  fontSize: 11),
+                                color: Colors.white.withOpacity(0.25),
+                                fontSize: 11,
+                              ),
                             ),
                           ],
                         ),
@@ -538,7 +675,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   color: Colors.amber.withOpacity(0.08),
                   borderRadius: BorderRadius.circular(10),
                   border:
-                  //ignore: deprecated_member_use
+                      //ignore: deprecated_member_use
                       Border.all(color: Colors.amber.withOpacity(0.25)),
                 ),
                 child: Row(
@@ -550,8 +687,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                         'Pengajuan akan diverifikasi admin dalam 1x24 jam.',
                         style: TextStyle(
                           //ignore: deprecated_member_use
-                            color: Colors.amber.withOpacity(0.9),
-                            fontSize: 12),
+                          color: Colors.amber.withOpacity(0.9),
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ],
@@ -569,20 +707,25 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     backgroundColor: const Color(0xFF1a56db),
                     disabledBackgroundColor: Colors.white12,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                   child: isSubmitting
                       ? const SizedBox(
                           width: 22,
                           height: 22,
                           child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2.5))
+                            color: Colors.white,
+                            strokeWidth: 2.5,
+                          ),
+                        )
                       : const Text(
                           'Kirim Pengajuan',
                           style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700),
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                 ),
               ),
@@ -614,59 +757,74 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     shape: BoxShape.circle,
                     border: Border.all(
                       //ignore: deprecated_member_use
-                        color: Colors.green.withOpacity(0.3), width: 2),
+                      color: Colors.green.withOpacity(0.3),
+                      width: 2,
+                    ),
                   ),
-                  child: const Icon(Icons.check_circle_rounded,
-                      color: Colors.green, size: 52),
+                  child: const Icon(
+                    Icons.check_circle_rounded,
+                    color: Colors.green,
+                    size: 52,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 const Text(
                   'Pengajuan Terkirim!',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900),
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   success != null ? formatRupiah(success.amount) : '',
                   style: const TextStyle(
-                      color: Color(0xFF1a56db),
-                      fontSize: 22,
-                      fontWeight: FontWeight.w800),
+                    color: Color(0xFF1a56db),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'via ${success?.methodName ?? ''}',
                   style: TextStyle(
                     //ignore: deprecated_member_use
-                      color: Colors.white.withOpacity(0.5), fontSize: 14),
+                    color: Colors.white.withOpacity(0.5),
+                    fontSize: 14,
+                  ),
                 ),
                 const SizedBox(height: 16),
                 Container(
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     //ignore: deprecated_member_use
                     color: Colors.white.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(10),
                     border:
-                    //ignore: deprecated_member_use
+                        //ignore: deprecated_member_use
                         Border.all(color: Colors.white.withOpacity(0.1)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.tag,
-                      //ignore: deprecated_member_use
-                          color: Colors.white.withOpacity(0.4), size: 14),
+                      Icon(
+                        Icons.tag,
+                        //ignore: deprecated_member_use
+                        color: Colors.white.withOpacity(0.4),
+                        size: 14,
+                      ),
                       const SizedBox(width: 6),
                       Text(
                         'Ref: ${success?.referenceNumber ?? '-'}',
                         style: TextStyle(
                           //ignore: deprecated_member_use
-                            color: Colors.white.withOpacity(0.5),
-                            fontSize: 13),
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -677,9 +835,10 @@ class _TopUpScreenState extends State<TopUpScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     //ignore: deprecated_member_use
-                      color: Colors.white.withOpacity(0.4),
-                      fontSize: 13,
-                      height: 1.5),
+                    color: Colors.white.withOpacity(0.4),
+                    fontSize: 13,
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 40),
                 SizedBox(
@@ -693,14 +852,16 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF1a56db),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     child: const Text(
                       'Kembali ke Wallet',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -713,15 +874,18 @@ class _TopUpScreenState extends State<TopUpScreen> {
   }
 
   void _submit() {
-    final amount = double.tryParse(
-            _amountController.text.replaceAll('.', '').replaceAll(',', '')) ??
+    final amount =
+        double.tryParse(
+          _amountController.text.replaceAll('.', '').replaceAll(',', ''),
+        ) ??
         0;
 
     if (amount < 10000) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Minimal top up Rp 10.000'),
-            backgroundColor: Colors.orange),
+          content: Text('Minimal top up Rp 10.000'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -729,8 +893,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
     if (_proofImage == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Upload bukti transfer dulu'),
-            backgroundColor: Colors.orange),
+          content: Text('Upload bukti transfer dulu'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
@@ -743,12 +908,14 @@ class _TopUpScreenState extends State<TopUpScreen> {
 
     if (selectedMethod == null) return;
 
-    context.read<TopUpBloc>().add(SubmitTopUp(
-      amount:         amount,
-      paymentMethod:  selectedMethod['name'] ?? '',
-      paymentAccount: selectedMethod['account_number'] ?? '',
-      paymentHolder:  selectedMethod['account_name'] ?? '',
-      imagePath:      _proofImage!.path,
-    ));
+    context.read<TopUpBloc>().add(
+      SubmitTopUp(
+        amount: amount,
+        paymentMethod: selectedMethod['name'] ?? '',
+        paymentAccount: selectedMethod['account_number'] ?? '',
+        paymentHolder: selectedMethod['account_name'] ?? '',
+        imagePath: _proofImage!.path,
+      ),
+    );
   }
 }
