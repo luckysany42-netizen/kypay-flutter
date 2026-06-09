@@ -1,7 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../services/api_service.dart';
 import '../../models/wallet_model.dart';
-import '../topup/topup_bloc.dart';
 import '../topup/topup_event.dart';
 import 'wallet_event.dart';
 import 'wallet_state.dart';
@@ -25,8 +24,8 @@ class WalletBloc extends Bloc<WalletEvent, WalletState> {
       final trxRes    = await ApiService.dio.get('/wallet/all-transactions');
 
       final data  = walletRes.data['data']
-                 ?? walletRes.data['wallet']
-                 ?? walletRes.data;
+                ?? walletRes.data['wallet']
+                ?? walletRes.data;
       _wallet       = WalletModel.fromJson(data);
       _transactions = trxRes.data['data'] ?? [];
 
