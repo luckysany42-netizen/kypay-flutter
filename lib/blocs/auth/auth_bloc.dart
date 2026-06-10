@@ -118,8 +118,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         final response = (e as dynamic).response;
         if (response?.statusCode == 422) {
           final errors = response?.data?['errors'];
-          if (errors?['email'] != null) message = 'Email sudah terdaftar.';
-          else if (errors?['phone'] != null) message = 'Nomor HP sudah terdaftar.';
+          if (errors?['email'] != null) {
+            message = 'Email sudah terdaftar.';
+          // ignore: curly_braces_in_flow_control_structures
+          } else if (errors?['phone'] != null) message = 'Nomor HP sudah terdaftar.';
         }
       } catch (_) {}
       emit(AuthError(message));

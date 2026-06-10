@@ -167,6 +167,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                     borderRadius: BorderRadius.circular(12),
                     //ignore: deprecated_member_use
                     border: Border.all(
+                      // ignore: deprecated_member_use
                       color: const Color(0xFF1a56db).withOpacity(0.3),
                     ),
                   ),
@@ -183,6 +184,7 @@ class _TopUpScreenState extends State<TopUpScreen> {
                           'Pilih metode pembayaran. Admin akan memverifikasi bukti transfer kamu.',
                           //ignore: deprecated_member_use
                           style: TextStyle(
+                            // ignore: deprecated_member_use
                             color: Colors.white.withOpacity(0.8),
                             fontSize: 12,
                           ),
@@ -270,8 +272,9 @@ class _TopUpScreenState extends State<TopUpScreen> {
                                             },
                                         loadingBuilder:
                                             (context, child, loadingProgress) {
-                                              if (loadingProgress == null)
+                                              if (loadingProgress == null) {
                                                 return child;
+                                              }
                                               return const Center(
                                                 child: SizedBox(
                                                   width: 20,

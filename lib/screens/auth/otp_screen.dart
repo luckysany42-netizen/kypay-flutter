@@ -12,6 +12,7 @@ import '../../blocs/auth/auth_state.dart';
 /// Penggunaan di RegisterScreen:
 ///   Navigator.push(context, MaterialPageRoute(
 ///     builder: (_) => BlocProvider.value(
+// ignore: unintended_html_in_doc_comment
 ///       value: context.read<AuthBloc>(),
 ///       child: OtpScreen(
 ///         phone:            state.phone,
@@ -246,6 +247,7 @@ class _OtpScreenState extends State<OtpScreen> with SingleTickerProviderStateMix
                     shape: BoxShape.circle,
                     //ignore: deprecated_member_use
                     border: Border.all(
+                      // ignore: deprecated_member_use
                       color: const Color(0xFF1a56db).withOpacity(0.3),
                       width: 2,
                     ),
@@ -750,6 +752,7 @@ class _PinSetupScreenState extends State<_PinSetupScreen>
                 mainAxisSpacing: 12,
                 crossAxisSpacing: 12,
                 physics: const NeverScrollableScrollPhysics(),
+                // ignore: avoid_types_as_parameter_names
                 children: ['1','2','3','4','5','6','7','8','9','','0','⌫'].map((num) {
                   final isEmpty = num == '';
                   return GestureDetector(

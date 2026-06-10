@@ -598,6 +598,7 @@ class _WalletScreenState extends State<WalletScreen>
                     Future.delayed(const Duration(milliseconds: 300), () {
                       // Tampilkan struk, dan setelah ditutup, tampilkan popup lagi
                       showStrukModal(
+                        // ignore: use_build_context_synchronously
                         savedContext,
                         StrukWidget(
                           type:            'top_up',
@@ -612,6 +613,7 @@ class _WalletScreenState extends State<WalletScreen>
                         ),
                       ).then((_) {
                         // Setelah struk ditutup, tampilkan popup lagi
+                        // ignore: use_build_context_synchronously
                         _showTopUpApprovedPopup(savedContext, savedState);
                       });
                     });
