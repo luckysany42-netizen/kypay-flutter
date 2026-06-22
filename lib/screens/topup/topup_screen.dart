@@ -32,10 +32,13 @@ class _TopUpScreenState extends State<TopUpScreen> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    context.read<TopUpBloc>().add(FetchPaymentMethods());
-  }
+void initState() {
+  super.initState();
+  print('═══════════════════════════════════════');
+  print('🔍 PAYMENT METHODS DEBUG - initState');
+  print('═══════════════════════════════════════');
+  context.read<TopUpBloc>().add(FetchPaymentMethods());
+}
 
   @override
   void dispose() {
@@ -153,6 +156,22 @@ class _TopUpScreenState extends State<TopUpScreen> {
         }
 
         if (state is TopUpMethodsLoaded) {
+          // DEBUG: Print struktur payment methods
+  print('═══════════════════════════════════════');
+  print('📋 PAYMENT METHODS LOADED');
+  print('Count: ${state.methods.length}');
+  
+  if (state.methods.isNotEmpty) {
+    for (var i = 0; i < state.methods.length; i++) {
+      print('');
+      print('Method $i: ${state.methods[i]['name']}');
+      print('  Keys: ${state.methods[i].keys.toList()}');
+      print('  Logo: ${state.methods[i]['logo']}');
+      print('  Logo Type: ${state.methods[i]['logo'].runtimeType}');
+      print('  Logo null? ${state.methods[i]['logo'] == null}');
+    }
+  }
+  print('═══════════════════════════════════════');
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -248,55 +267,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 48,
-                              height: 48,
-                              decoration: BoxDecoration(
-                                //ignore: deprecated_member_use
-                                color: const Color(0xFF1a56db).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: method['logo'] != null
-                                    ? Image.network(
-                                        method['logo'] as String,
-                                        fit: BoxFit.cover,
-                                        errorBuilder:
-                                            (context, error, stackTrace) {
-                                              return const Icon(
-                                                Icons.account_balance,
-                                                color: Color(0xFF1a56db),
-                                                size: 22,
-                                              );
-                                            },
-                                        loadingBuilder:
-                                            (context, child, loadingProgress) {
-                                              if (loadingProgress == null) {
-                                                return child;
-                                              }
-                                              return const Center(
-                                                child: SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child: CircularProgressIndicator(
-                                                    strokeWidth: 2,
-                                                    valueColor:
-                                                        AlwaysStoppedAnimation<
-                                                          Color
-                                                        >(Color(0xFF1a56db)),
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                      )
-                                    : const Icon(
-                                        Icons.account_balance,
-                                        color: Color(0xFF1a56db),
-                                        size: 22,
-                                      ),
-                              ),
-                            ),
+                            // ── Payment Method Logo ──
+                            _buildPaymentMethodLogo(method, size: 48),
                             const SizedBox(width: 14),
                             Expanded(
                               child: Column(
@@ -410,52 +382,8 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 ),
                 child: Row(
                   children: [
-                    Container(
-                      width: 42,
-                      height: 42,
-                      decoration: BoxDecoration(
-                        //ignore: deprecated_member_use
-                        color: const Color(0xFF1a56db).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: method != null && method['logo'] != null
-                            ? Image.network(
-                                method['logo'] as String,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.account_balance,
-                                    color: Color(0xFF1a56db),
-                                    size: 20,
-                                  );
-                                },
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                      if (loadingProgress == null) return child;
-                                      return const Center(
-                                        child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Color(0xFF1a56db),
-                                                ),
-                                          ),
-                                        ),
-                                      );
-                                    },
-                              )
-                            : const Icon(
-                                Icons.account_balance,
-                                color: Color(0xFF1a56db),
-                                size: 20,
-                              ),
-                      ),
-                    ),
+                    // ── Payment Method Logo ──
+                    _buildPaymentMethodLogo(method, size: 42),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -870,11 +798,72 @@ class _TopUpScreenState extends State<TopUpScreen> {
                 ),
               ],
             ),
-          ),
+          )
         );
       },
     );
   }
+
+  Widget _buildPaymentMethodLogo(Map<String, dynamic>? method, {double size = 48}) {
+     // DEBUG
+  print('🖼️ _buildPaymentMethodLogo called');
+  print('Method: ${method?['name']}');
+  print('Logo value: ${method?['logo']}');
+  print('Logo Type: ${method?['logo'].runtimeType}');
+  print('Logo null? ${method?['logo'] == null}');
+  print('---');
+  
+  // 👆👆👆 PASTE SAMPAI SINI 👆👆👆
+  return Container(
+    width: size,
+    height: size,
+    decoration: BoxDecoration(
+      color: const Color(0xFF1a56db).withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(10),
+    ),
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: method != null && method['logo'] != null && method['logo'].toString().isNotEmpty
+          ? Image.network(
+              method['logo'] as String,
+              fit: BoxFit.contain,
+              alignment: Alignment.center,
+              frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                print('✅ Payment method image loaded');
+                return child;
+              },
+              errorBuilder: (context, error, stackTrace) {
+                print('❌ Payment method image error: $error');
+                return const Icon(
+                  Icons.account_balance,
+                  color: Color(0xFF1a56db),
+                  size: 22,
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Center(
+                  child: SizedBox(
+                    width: size * 0.5,
+                    height: size * 0.5,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        Color(0xFF1a56db),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            )
+          : const Icon(
+              Icons.account_balance,
+              color: Color(0xFF1a56db),
+              size: 22,
+            ),
+    ),
+  );
+}
 
   void _submit() {
     final amount =

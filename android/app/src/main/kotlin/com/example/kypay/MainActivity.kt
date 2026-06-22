@@ -1,4 +1,4 @@
-package com.kypay.kypay
+package com.example.kypay
 
 import io.flutter.embedding.android.FlutterActivity
 

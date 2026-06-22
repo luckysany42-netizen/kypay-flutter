@@ -23,6 +23,19 @@ class _MerchantInputScreenState extends State<MerchantInputScreen> {
   @override
   void initState() {
     super.initState();
+    // DEBUG: Print merchant info
+  print('═══════════════════════════════════════');
+  print('🔍 MERCHANT DEBUG INFO');
+  print('═══════════════════════════════════════');
+  print('Merchant ID: ${widget.merchant.id}');
+  print('Merchant Name: ${widget.merchant.name}');
+  print('Merchant Code: ${widget.merchant.code}');
+  print('Logo URL: ${widget.merchant.logoUrl}');
+  print('Logo URL Type: ${widget.merchant.logoUrl.runtimeType}');
+  print('Is Null: ${widget.merchant.logoUrl == null}');
+  print('Is Empty: ${widget.merchant.logoUrl?.isEmpty}');
+  print('Category Code: ${widget.merchant.category?.code}');
+  print('═══════════════════════════════════════');
     // Load produk di background
     context.read<MerchantBloc>().add(LoadProducts(widget.merchant.id));
     _inputController.addListener(_validate);
@@ -84,16 +97,17 @@ class _MerchantInputScreenState extends State<MerchantInputScreen> {
                 Row(
                   children: [
                     Container(
-                      width: 56, height: 56,
+                      width: 56, 
+                      height: 56,
                       decoration: BoxDecoration(
                         //ignore: deprecated_member_use
                         color: Colors.white.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(14),
                       ),
-                      child: Center(child: Text(
-                        _categoryEmoji(widget.merchant.category?.code),
-                        style: const TextStyle(fontSize: 28),
-                      )),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: _buildMerchantLogo(widget.merchant),
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Column(
@@ -221,12 +235,77 @@ class _MerchantInputScreenState extends State<MerchantInputScreen> {
     );
   }
 
-  String _categoryEmoji(String? code) => switch (code ?? '') {
-    'game'    => '🎮',
-    'pulsa'   => '📱',
-    'tagihan' => '📄',
-    'rumah'   => '⚡',
-    'hiburan' => '🎵',
-    _         => '💳',
-  };
+  Widget _buildMerchantLogo(MerchantModel merchant) {
+  debugPrint('🖼️ _buildMerchantLogo called');
+  debugPrint('logoUrl: ${merchant.logoUrl}');
+  debugPrint('logoUrl isEmpty: ${merchant.logoUrl?.isEmpty}');
+  
+  // Jika merchant punya logo dari API, tampilkan
+  if (merchant.logoUrl != null && merchant.logoUrl!.isNotEmpty) {
+    debugPrint('✅ Logo URL exist, building Image.network');
+    debugPrint('URL: ${merchant.logoUrl}');
+    
+    return Image.network(
+      merchant.logoUrl!,
+      fit: BoxFit.contain,
+      alignment: Alignment.center,
+      // DEBUG: Add onLoaded callback
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        debugPrint('📸 Image frame loaded, frame: $frame');
+        return child;
+      },
+      errorBuilder: (context, error, stackTrace) {
+        debugPrint('❌ Image error:');
+        debugPrint('Error: $error');
+        debugPrint('StackTrace: $stackTrace');
+        // Fallback ke kategori icon jika gambar gagal
+        return _buildCategoryFallback(merchant.category?.code);
+      },
+      loadingBuilder: (context, child, loadingProgress) {
+        debugPrint('⏳ Image loading progress: ${loadingProgress?.cumulativeBytesLoaded}/${loadingProgress?.expectedTotalBytes}');
+        if (loadingProgress == null) {
+          debugPrint('✅ Loading complete');
+          return child;
+        }
+        return Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(
+                Colors.white.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+  
+  debugPrint('❌ Logo URL null or empty, fallback to icon');
+  // Jika tidak ada logo, tampilkan fallback kategori
+  return _buildCategoryFallback(merchant.category?.code);
+}
+
+  /// ── Build Category Fallback ──
+  /// Menampilkan Material Icon berdasarkan kategori
+  Widget _buildCategoryFallback(String? code) {
+    final iconData = switch (code ?? '') {
+      'game'    => Icons.sports_esports,
+      'pulsa'   => Icons.phone_android,
+      'tagihan' => Icons.receipt_long,
+      'rumah'   => Icons.flash_on,
+      'hiburan' => Icons.music_note,
+      _         => Icons.credit_card,
+    };
+
+    return Center(
+      child: Icon(
+        iconData,
+        color: const Color(0xFF1a56db),
+        size: 28,
+      ),
+    );
+  }
 }

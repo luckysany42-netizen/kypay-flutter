@@ -35,6 +35,8 @@ class MerchantModel {
           : null,
     );
   }
+
+  get logo => null;
 }
 
 class MerchantInputConfig {

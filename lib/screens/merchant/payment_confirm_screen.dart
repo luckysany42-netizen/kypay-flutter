@@ -240,14 +240,16 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
               children: [
                 Row(children: [
                   Container(
-                    width: 44, height: 44,
+                    width: 44, 
+                    height: 44,
                     decoration: BoxDecoration(
-                      //ignore: deprecated_member_use
-                      color: const Color(0xFF1a56db).withOpacity(0.15),
+                      color: const Color(0xFF1a56db).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Center(child: Text(_emoji(widget.merchant.category?.code),
-                      style: const TextStyle(fontSize: 22))),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(10),
+                      child: _buildMerchantLogoSmall(widget.merchant),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(child: Column(
@@ -703,6 +705,7 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
     //ignore: deprecated_member_use
     color: Colors.white.withOpacity(0.07));
 
+  // ignore: unused_element
   String _emoji(String? code) => switch (code ?? '') {
     'game'    => '🎮',
     'pulsa'   => '📱',
@@ -711,4 +714,19 @@ class _PaymentConfirmScreenState extends State<PaymentConfirmScreen> {
     'hiburan' => '🎵',
     _         => '💳',
   };
+}
+
+Widget _buildMerchantLogoSmall(MerchantModel merchant) {
+  if (merchant.logoUrl != null && merchant.logoUrl!.isNotEmpty) {
+    return Image.network(
+      merchant.logoUrl!,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) {
+        return Center(child: Icon(Icons.shopping_bag,
+          color: const Color(0xFF1a56db), size: 22));
+      },
+    );
+  }
+  return Center(child: Icon(Icons.shopping_bag,
+    color: const Color(0xFF1a56db), size: 22));
 }

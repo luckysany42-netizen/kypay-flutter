@@ -38,7 +38,7 @@ class QrPaymentReceived extends QrState {
   final String transactionNumber;
   QrPaymentReceived({required this.amount, required this.transactionNumber});
 }
- 
+  
 // Detail QR dari hasil scan
 class QrScanned extends QrState {
   final String token;
