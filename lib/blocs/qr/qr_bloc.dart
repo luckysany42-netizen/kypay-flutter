@@ -180,6 +180,7 @@ class QrBloc extends Bloc<QrEvent, QrState> {
           token: data['qr_token'],
           amount: (data['amount'] as num).toDouble(),
           merchantName: data['merchant_name'] ?? '',
+          merchantAvatar: data['merchant_avatar'],
           description: data['description'],
           isBillPayment: data['is_bill_payment'] ?? false,
         ),

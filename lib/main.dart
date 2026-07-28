@@ -38,7 +38,7 @@ class KyPayApp extends StatelessWidget {
         home: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
             if (state is AuthAuthenticated) {
-              // ✅ Buat BLoC baru setiap kali user login
+              // Buat BLoC baru setiap kali user login
               // Ini fix masalah WalletBloc fetch dengan token NULL setelah logout
               return MultiBlocProvider(
                 providers: [

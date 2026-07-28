@@ -22,7 +22,7 @@ class _MerchantInputScreenState extends State<MerchantInputScreen> {
   final _inputController = TextEditingController();
   bool _isValid = false;
 
-  @override
+  @override 
   void initState() {
     super.initState();
     // DEBUG: Print merchant info

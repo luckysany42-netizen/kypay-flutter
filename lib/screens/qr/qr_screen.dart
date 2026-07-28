@@ -7,6 +7,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../blocs/qr/qr_bloc.dart';
 import '../../blocs/qr/qr_event.dart';
 import '../../blocs/qr/qr_state.dart';
+import '../../services/api_service.dart';
 import '../../blocs/wallet/wallet_bloc.dart';
 import '../../blocs/wallet/wallet_event.dart';
 import '../../blocs/wallet/wallet_state.dart';

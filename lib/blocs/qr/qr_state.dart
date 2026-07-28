@@ -44,12 +44,14 @@ class QrScanned extends QrState {
   final String token;
   final double amount;
   final String merchantName;
+  final String? merchantAvatar;
   final String? description;
   final bool isBillPayment;
   QrScanned({
     required this.token,
     required this.amount,
     required this.merchantName,
+    this.merchantAvatar,
     this.description,
     this.isBillPayment = false,
   });
