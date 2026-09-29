@@ -34,6 +34,50 @@ class _QrScreenState extends State<QrScreen> {
     decimalDigits: 0,
   ).format(val);
 
+  Widget _buildMerchantAvatar(String? avatarPath, String name) {
+  final initials = name.isNotEmpty ? name[0].toUpperCase() : 'K';
+
+  if (avatarPath != null && avatarPath.isNotEmpty) {
+    final fullUrl = avatarPath.startsWith('http')
+        ? avatarPath
+        : '${ApiService.baseUrl.replaceAll('/api', '/storage/')}$avatarPath';
+
+    return CircleAvatar(
+      radius: 28,
+      backgroundColor: const Color(0xFF1a56db),
+      child: ClipOval(
+        child: Image.network(
+          fullUrl,
+          width: 56,
+          height: 56,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => Text(
+            initials,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  return CircleAvatar(
+    backgroundColor: const Color(0xFF1a56db),
+    radius: 28,
+    child: Text(
+      initials,
+      style: const TextStyle(
+        color: Colors.white,
+        fontSize: 22,
+        fontWeight: FontWeight.bold,
+      ),
+    ),
+  );
+}
+
   @override
   void initState() {
     super.initState();
@@ -646,19 +690,9 @@ class _QrScreenState extends State<QrScreen> {
             ),
             child: Column(
               children: [
-                CircleAvatar(
-                  backgroundColor: const Color(0xFF1a56db),
-                  radius: 28,
-                  child: Text(
-                    state.merchantName.isNotEmpty
-                        ? state.merchantName[0].toUpperCase()
-                        : 'K',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                _buildMerchantAvatar(
+                  state.merchantAvatar,
+                  state.merchantName,
                 ),
                 const SizedBox(height: 12),
                 Text(

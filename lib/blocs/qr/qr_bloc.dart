@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:dio/dio.dart';
 import 'package:kypay/blocs/qr/qr_event.dart';
@@ -175,6 +176,10 @@ class QrBloc extends Bloc<QrEvent, QrState> {
         '/qr-payment/detail/${event.token}',
       );
       final data = response.data['data'];
+
+      debugPrint('🖼️ merchant_avatar dari API: ${data['merchant_avatar']}');
+      debugPrint('👤 merchant_name: ${data['merchant_name']}');
+
       emit(
         QrScanned(
           token: data['qr_token'],
